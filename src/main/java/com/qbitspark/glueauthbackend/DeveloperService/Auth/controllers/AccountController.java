@@ -6,6 +6,7 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.ResetPasswor
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.services.AccountService;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +33,8 @@ public class AccountController {
 
     // Verify an account by email
     @GetMapping("/verify")
-    public ResponseEntity<GlobalJsonResponseBody> verifyAccountByEmail(@RequestParam String token) throws VerificationException {
-        return ResponseEntity.ok(accountService.verifyAccountByEmail(token));
+    public ResponseEntity<GlobalJsonResponseBody> verifyAccountByEmail(@RequestParam String token, HttpServletResponse httpServletResponse) throws VerificationException {
+        return ResponseEntity.ok(accountService.verifyAccountByEmail(token, httpServletResponse));
     }
 
     //Request password reset link
@@ -52,8 +53,9 @@ public class AccountController {
 
     //Login
     @PostMapping("/login")
-    public ResponseEntity<GlobalJsonResponseBody> login(@Valid @RequestBody LoginRequestBody requestBody) {
-        return ResponseEntity.ok(accountService.login(requestBody));
+    public ResponseEntity<GlobalJsonResponseBody> login(@Valid @RequestBody LoginRequestBody requestBody,
+                                                        HttpServletResponse response) {
+        return ResponseEntity.ok(accountService.login(requestBody, response));
     }
 
     //Resend verification link
