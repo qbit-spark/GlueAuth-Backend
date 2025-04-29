@@ -1,5 +1,6 @@
 package com.qbitspark.glueauthbackend.DeveloperService.GlobeSecurity;
 
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.utils.CookieUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,12 +16,15 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
+import java.util.Optional;
 
 public class JWTAuthFilter extends OncePerRequestFilter {
     @Autowired
-    private  JWTProvider jwtProvider;
+    private JWTProvider jwtProvider;
     @Autowired
     private UserDetailsService userDetailsService;
+    @Autowired
+    private CookieUtils cookieUtil;
 
     private final HandlerExceptionResolver handlerExceptionResolver;
 
@@ -36,8 +40,18 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) {
 
         try {
+            // Try to get token from header
             String token = getTokenFromHeader(request);
-            // Validate specifically as an access token
+
+            // If token is not in header, try to get it from cookie
+            if (!StringUtils.hasText(token)) {
+                Optional<String> tokenFromCookie = cookieUtil.getAccessTokenFromCookies(request);
+                if (tokenFromCookie.isPresent()) {
+                    token = tokenFromCookie.get();
+                }
+            }
+
+            // Validate token if present
             if (StringUtils.hasText(token) && jwtProvider.validToken(token, "ACCESS")) {
                 String userName = jwtProvider.getUserName(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userName);

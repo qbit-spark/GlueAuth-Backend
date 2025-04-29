@@ -11,11 +11,13 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.AccountRepo;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.RoleRepo;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.VerificationTokenRepo;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.services.AccountService;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.utils.CookieUtils;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.AccountExistenceException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeEmailService.EmailService;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeSecurity.JWTProvider;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
@@ -55,8 +57,7 @@ public class AccountServiceIMPL implements AccountService {
     private final EmailService emailService;
     private final JWTProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
-    private final WebClient webClient;
-    private final ObjectMapper objectMapper;
+    private final CookieUtils cookieUtil;
 
 
 
@@ -80,8 +81,8 @@ public class AccountServiceIMPL implements AccountService {
     }
 
     @Override
-    public GlobalJsonResponseBody login(LoginRequestBody loginRequestBody) {
-        //Todo: Validate request body
+    public GlobalJsonResponseBody login(LoginRequestBody loginRequestBody, HttpServletResponse response) {
+        // Validate request body
         if (loginRequestBody.getEmail() == null || loginRequestBody.getEmail().trim().isEmpty()) {
             throw new ValidationException("Email is required");
         }
@@ -89,21 +90,26 @@ public class AccountServiceIMPL implements AccountService {
         if (loginRequestBody.getPassword() == null || loginRequestBody.getPassword().trim().isEmpty()) {
             throw new ValidationException("Password is required");
         }
-        //Todo: Check if account exists
+
+        // Check if account exists
         AccountEntity account = accountRepo.findByEmailAndUsername(loginRequestBody.getEmail(), generateUserName(loginRequestBody.getEmail())).orElseThrow(() -> new AccountExistenceException("Account not found"));
-        //Todo: Check if account is verified
+
+        // Check if account is verified
         if (!account.isEmailVerified()) {
             throw new AccountExistenceException("Account not verified");
         }
-        //Todo: Check if account is active
+
+        // Check if account is active
         if (!account.isActive()) {
             throw new AccountExistenceException("Account is not active");
         }
-        //Todo: Check if account is locked
+
+        // Check if account is locked
         if (account.isLocked()) {
             throw new AccountExistenceException("Account is locked");
         }
-        //Todo: Generate token
+
+        // Generate token
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         account.getUsername(),
@@ -113,48 +119,47 @@ public class AccountServiceIMPL implements AccountService {
         String accessToken = tokenProvider.generateAccessToken(authentication);
         String refreshToken = tokenProvider.generateRefreshToken(authentication);
 
-        LoginResponse loginResponse = new LoginResponse();
-        loginResponse.setAccessToken(accessToken);
-        loginResponse.setRefreshToken(refreshToken);
-        loginResponse.setUserData(account);
+        // Set cookies instead of returning tokens in the response body
+        cookieUtil.addAccessTokenCookie(response, accessToken);
+        cookieUtil.addRefreshTokenCookie(response, refreshToken);
 
-        return generateSuccessResponseBody("Login successful", loginResponse, HttpStatus.OK);
+        // Return user data without tokens
+        return generateSuccessResponseBody("Login successful", account, HttpStatus.OK);
     }
-
 
 
     @Transactional
     @Override
-    public GlobalJsonResponseBody verifyAccountByEmail(String token) throws VerificationException {
-
-        //Todo: Check if token is exist
+    public GlobalJsonResponseBody verifyAccountByEmail(String token, HttpServletResponse response) throws VerificationException {
+        // Check if token exists
         VerificationTokenEntity verificationToken = verificationTokenRepo.findByToken(token).orElseThrow(() -> new VerificationException("Invalid token"));
-        //Todo: Check if token is valid and if token is used and is expired
+
+        // Check if token is valid and if token is used and is expired
         if (verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            //If token is expired remove it
+            // If token is expired remove it
             verificationTokenRepo.delete(verificationToken);
             return generateSuccessResponseBody("Token expired", "Token expired", HttpStatus.BAD_REQUEST);
         }
 
-        //Todo: Set account as verified
+        // Set account as verified
         AccountEntity account = verificationToken.getAccount();
         account.setEmailVerified(true);
         accountRepo.save(account);
-        //Todo: Delete token after use (In case update expired and usage failed to  update)
+
+        // Delete token after use
         verificationTokenRepo.delete(verificationToken);
 
-
-        //Todo: Generate access and refresh tokens
+        // Generate access and refresh tokens
         Authentication authentication = new UsernamePasswordAuthenticationToken(account.getUsername(), null);
         String accessToken = tokenProvider.generateAccessToken(authentication);
         String refreshToken = tokenProvider.generateRefreshToken(authentication);
 
-        LoginResponse loginResponse = new LoginResponse();
-        loginResponse.setAccessToken(accessToken);
-        loginResponse.setRefreshToken(refreshToken);
-        loginResponse.setUserData(account);
+        // Set cookies instead of returning tokens in the response body
+        cookieUtil.addAccessTokenCookie(response, accessToken);
+        cookieUtil.addRefreshTokenCookie(response, refreshToken);
 
-        return generateSuccessResponseBody("Account verified successfully", loginResponse, HttpStatus.OK);
+        // Return user data without tokens
+        return generateSuccessResponseBody("Account verified successfully", account, HttpStatus.OK);
     }
 
     @Transactional

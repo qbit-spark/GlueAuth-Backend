@@ -3,6 +3,7 @@ package com.qbitspark.glueauthbackend.DeveloperService.Auth.services;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.*;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.UUID;
 
@@ -11,8 +12,7 @@ public interface AccountService {
     GlobalJsonResponseBody createAccount(CreateAccountRequestBody requestBody);
 
     //Method to login
-    GlobalJsonResponseBody login(LoginRequestBody loginRequestBody);
-
+    GlobalJsonResponseBody login(LoginRequestBody loginRequestBody, HttpServletResponse response);
     // Method to get account details by ID
     GlobalJsonResponseBody getAccountById(UUID accountId);
 
@@ -24,7 +24,7 @@ public interface AccountService {
     GlobalJsonResponseBody deleteAccount(UUID accountId);
 
     // Method to verify email
-    GlobalJsonResponseBody verifyAccountByEmail(String token) throws VerificationException;
+    GlobalJsonResponseBody verifyAccountByEmail(String token, HttpServletResponse response) throws VerificationException;
 
     // Method to send a password-reset link
     GlobalJsonResponseBody sendPasswordResetLink(String email);

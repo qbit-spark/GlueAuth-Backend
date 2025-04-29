@@ -6,6 +6,8 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEnti
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.AccountType;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SocialProviders;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.AccountRepo;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.utils.CookieUtils;
+
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeSecurity.JWTProvider;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,6 +41,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final CookieUtils cookieUtil;
 
     @Override
     @Transactional
@@ -74,6 +77,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String jwtAccessToken = tokenProvider.generateAccessToken(customAuth);
         String refreshToken = tokenProvider.generateRefreshToken(customAuth);
 
+        // Set the tokens as cookies
+        cookieUtil.addAccessTokenCookie(response, jwtAccessToken);
+        cookieUtil.addRefreshTokenCookie(response, refreshToken);
+
         // Get original redirect from state parameter if available
         String redirectUrl = extractRedirectUrl(request.getParameter("state"));
         if (redirectUrl == null || redirectUrl.isEmpty()) {
@@ -81,13 +88,11 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             redirectUrl = determineTargetUrl(request, response, authentication);
         }
 
-        // Append tokens to the redirect URL
-        redirectUrl = appendTokensToUrl(redirectUrl, jwtAccessToken, refreshToken);
-
         log.info("Redirecting to: {}", redirectUrl);
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 
+    // Rest of the methods remain the same...
     private String getAccessToken(OAuth2AuthenticationToken authentication) {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
@@ -95,66 +100,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         return client.getAccessToken().getTokenValue();
     }
-
-
-    private String extractEmail(OAuth2User oauth2User, String registrationId, String accessToken) {
-        if ("github".equals(registrationId)) {
-            // Try to get email from user attributes first
-            String email = oauth2User.getAttribute("email");
-
-            // If email is null or empty, try to fetch from emails endpoint
-            if (email == null || email.isEmpty()) {
-                try {
-                    log.info("Fetching email from GitHub API");
-                    // Make API call to GitHub's email endpoint
-                    String response = webClient.get()
-                            .uri("https://api.github.com/user/emails")
-                            .header("Authorization", "token " + accessToken)
-                            .retrieve()
-                            .bodyToMono(String.class)
-                            .block();
-
-                    // Parse response to find primary email
-                    JsonNode emailsNode = objectMapper.readTree(response);
-
-                    if (emailsNode.isArray()) {
-                        for (JsonNode emailNode : emailsNode) {
-                            // Look for primary and verified email - removed non-breaking spaces
-                            if (emailNode.has("primary") && emailNode.get("primary").asBoolean() &&
-                                    emailNode.has("verified") && emailNode.get("verified").asBoolean()) {
-                                email = emailNode.get("email").asText();
-                                log.info("Found primary verified email: {}", email);
-                                break;
-                            }
-                        }
-
-                        // If no primary verified email found, look for any verified email
-                        if (email == null || email.isEmpty()) {
-                            for (JsonNode emailNode : emailsNode) {
-                                if (emailNode.has("verified") && emailNode.get("verified").asBoolean()) {
-                                    email = emailNode.get("email").asText();
-                                    log.info("Found verified email: {}", email);
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Last resort: take the first email
-                        if ((email == null || email.isEmpty()) && emailsNode.size() > 0 && emailsNode.get(0).has("email")) {
-                            email = emailsNode.get(0).get("email").asText();
-                            log.info("Using first available email: {}", email);
-                        }
-                    }
-                } catch (Exception e) {
-                    log.error("Failed to fetch GitHub emails: {}", e.getMessage(), e);
-                }
-            }
-
-            return email;
-        }
-        return null;
-    }
-
 
     private SocialProviders mapRegistrationIdToProvider(String registrationId) {
         if ("github".equals(registrationId)) {
@@ -234,7 +179,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     //generate username from email
     private String generateUserName(String email) {
-
         StringBuilder username = new StringBuilder();
         for (int i = 0; i < email.length(); i++) {
             char c = email.charAt(i);
@@ -245,11 +189,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             }
         }
         return username.toString();
-    }
-
-    private String appendTokensToUrl(String url, String accessToken, String refreshToken) {
-        String separator = url.contains("?") ? "&" : "?";
-        return url + separator + "access_token=" + accessToken + "&refresh_token=" + refreshToken;
     }
 
     private String extractRedirectUrl(String state) {
@@ -264,4 +203,61 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             return null;
         }
     }
-}
+
+    private String extractEmail(OAuth2User oauth2User, String registrationId, String accessToken) {
+        if ("github".equals(registrationId)) {
+            // Try to get email from user attributes first
+            String email = oauth2User.getAttribute("email");
+
+            // If email is null or empty, try to fetch from emails endpoint
+            if (email == null || email.isEmpty()) {
+                try {
+                    log.info("Fetching email from GitHub API");
+                    // Make API call to GitHub's email endpoint
+                    String response = webClient.get()
+                            .uri("https://api.github.com/user/emails")
+                            .header("Authorization", "token " + accessToken)
+                            .retrieve()
+                            .bodyToMono(String.class)
+                            .block();
+
+                    // Parse response to find primary email
+                    JsonNode emailsNode = objectMapper.readTree(response);
+
+                    if (emailsNode.isArray()) {
+                        for (JsonNode emailNode : emailsNode) {
+                            // Look for primary and verified email - removed non-breaking spaces
+                            if (emailNode.has("primary") && emailNode.get("primary").asBoolean() &&
+                                    emailNode.has("verified") && emailNode.get("verified").asBoolean()) {
+                                email = emailNode.get("email").asText();
+                                log.info("Found primary verified email: {}", email);
+                                break;
+                            }
+                        }
+
+                        // If no primary verified email found, look for any verified email
+                        if (email == null || email.isEmpty()) {
+                            for (JsonNode emailNode : emailsNode) {
+                                if (emailNode.has("verified") && emailNode.get("verified").asBoolean()) {
+                                    email = emailNode.get("email").asText();
+                                    log.info("Found verified email: {}", email);
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Last resort: take the first email
+                        if ((email == null || email.isEmpty()) && emailsNode.size() > 0 && emailsNode.get(0).has("email")) {
+                            email = emailsNode.get(0).get("email").asText();
+                            log.info("Using first available email: {}", email);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to fetch GitHub emails: {}", e.getMessage(), e);
+                }
+            }
+
+            return email;
+        }
+        return null;
+    }}
