@@ -2,6 +2,7 @@ package com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads;
 
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.AccountType;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.OrganizationSize;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SocialProviders;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -38,7 +39,7 @@ public class CreateAccountRequestBody {
     //@Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone number format is invalid")
     private String phoneNumber;
 
-    private String socialLoginProvider;
+    private SocialProviders socialAuthProvider;
 
     private String socialLoginId;
 
@@ -52,13 +53,4 @@ public class CreateAccountRequestBody {
         return true;
     }
 
-    // Validation for social login or password
-    @AssertTrue(message = "Either password or social login information is required")
-    public boolean isAuthMethodValid() {
-        boolean hasPassword = password != null && !password.trim().isEmpty();
-        boolean hasSocialLogin = socialLoginProvider != null && !socialLoginProvider.trim().isEmpty() &&
-                socialLoginId != null && !socialLoginId.trim().isEmpty();
-
-        return hasPassword || hasSocialLogin;
-    }
 }

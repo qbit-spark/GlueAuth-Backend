@@ -1,9 +1,6 @@
 package com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities;
 
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.AccountType;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.OrganizationSize;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SubscriptionStatus;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SubscriptionTier;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.*;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -63,8 +60,8 @@ public class AccountEntity {
     @Column(name = "two_factor_enabled")
     private boolean twoFactorEnabled;
 
-    @Column(name = "social_login_provider")
-    private String socialLoginProvider;
+    @Column(name = "social_auth_provider")
+    private SocialProviders socialAuthProvider;
 
     @Column(name = "social_login_id")
     private String socialLoginId;

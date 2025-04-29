@@ -10,13 +10,18 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Base64;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/account")
 public class AccountController {
     private final AccountService accountService;
+    private final ClientRegistrationRepository clientRegistrationRepository;
 
     // Create an account
     @PostMapping
@@ -56,5 +61,32 @@ public class AccountController {
     public ResponseEntity<GlobalJsonResponseBody> resendVerificationLink(@RequestParam String email) {
         return ResponseEntity.ok(accountService.resendVerificationLink(email));
     }
+
+
+    @GetMapping("/authorization/{provider}")
+    public ResponseEntity<String> getAuthorizationUrl(@PathVariable String provider,
+                                                      @RequestParam String redirectUri) {
+        ClientRegistration registration = clientRegistrationRepository.findByRegistrationId(provider);
+        if (registration == null) {
+            return ResponseEntity.badRequest().body("Unknown provider: " + provider);
+        }
+
+        // Encode redirectUri for state parameter
+        String state = generateState(redirectUri);
+
+        String authUrl = registration.getProviderDetails().getAuthorizationUri() +
+                "?client_id=" + registration.getClientId() +
+                "&redirect_uri=" + registration.getRedirectUri() +
+                "&scope=" + String.join(",", registration.getScopes()) +
+                "&response_type=code" +
+                "&state=" + state;
+
+        return ResponseEntity.ok(authUrl);
+    }
+
+    private String generateState(String redirectUri) {
+        return Base64.getEncoder().encodeToString(redirectUri.getBytes());
+    }
+
 
 }

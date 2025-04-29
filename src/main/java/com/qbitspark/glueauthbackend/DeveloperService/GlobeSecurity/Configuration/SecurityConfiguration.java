@@ -1,6 +1,7 @@
 package com.qbitspark.glueauthbackend.DeveloperService.GlobeSecurity.Configuration;
 
 
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.Auth2Handler.OAuth2AuthenticationSuccessHandler;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeSecurity.JWTAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class SecurityConfiguration {
     @Qualifier("handlerExceptionResolver")
     private HandlerExceptionResolver exceptionResolver;
 
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+
+
     @Bean
     public JWTAuthFilter jwtAuthenticationFilter() {
         return new JWTAuthFilter(exceptionResolver);
@@ -55,8 +59,12 @@ public class SecurityConfiguration {
 
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
 
-
                         .anyRequest().authenticated())
+                .oauth2Login(oauth2 -> oauth2
+                        .redirectionEndpoint(endpoint -> endpoint
+                                .baseUri("/api/account/oauth2/callback/*"))
+                        .successHandler(oAuth2AuthenticationSuccessHandler))
+
                 .httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));

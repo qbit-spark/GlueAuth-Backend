@@ -2,6 +2,7 @@ package com.qbitspark.glueauthbackend.DeveloperService.Auth.repos;
 
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEntity;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.AccountType;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SocialProviders;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -23,5 +24,7 @@ public interface AccountRepo extends JpaRepository<AccountEntity, UUID> {
     void deleteById(UUID id);
 
     boolean existsByEmailAndUsername(String email, String username);
+
+    Optional<AccountEntity> findBySocialLoginIdAndSocialAuthProvider(String socialLoginId, SocialProviders provider);
 
 }

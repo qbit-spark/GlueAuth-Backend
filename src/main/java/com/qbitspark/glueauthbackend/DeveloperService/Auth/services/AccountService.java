@@ -1,9 +1,6 @@
 package com.qbitspark.glueauthbackend.DeveloperService.Auth.services;
 
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.CreateAccountRequestBody;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.LoginRequestBody;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.ResetPasswordRequestBody;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.UpdateAccountRequestBody;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.*;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
 
@@ -21,6 +18,7 @@ public interface AccountService {
 
     // Method to update account details
     GlobalJsonResponseBody updateAccount(UUID accountId, UpdateAccountRequestBody requestBody);
+
 
     // Method to delete an account
     GlobalJsonResponseBody deleteAccount(UUID accountId);

@@ -1,12 +1,11 @@
 package com.qbitspark.glueauthbackend.DeveloperService.Auth.services.IMPL;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEntity;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountRoles;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.VerificationTokenEntity;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.AccountType;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SubscriptionStatus;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SubscriptionTier;
-import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.VerificationType;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.*;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.*;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.AccountRepo;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.RoleRepo;
@@ -22,7 +21,9 @@ import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,11 +31,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Pattern;
 
 @Service
@@ -44,6 +47,7 @@ public class AccountServiceIMPL implements AccountService {
     @Value("${glue.auth.email.verify-frontend.base.uri}")
     private String emailVerificationBaseUri;
 
+
     private final AccountRepo accountRepo;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepo roleRepo;
@@ -51,6 +55,10 @@ public class AccountServiceIMPL implements AccountService {
     private final EmailService emailService;
     private final JWTProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final WebClient webClient;
+    private final ObjectMapper objectMapper;
+
+
 
     @Transactional
     @Override
@@ -112,6 +120,7 @@ public class AccountServiceIMPL implements AccountService {
 
         return generateSuccessResponseBody("Login successful", loginResponse, HttpStatus.OK);
     }
+
 
 
     @Transactional
@@ -317,7 +326,7 @@ public class AccountServiceIMPL implements AccountService {
             account.setPasswordHash(passwordEncoder.encode(requestBody.getPassword()));
         } else {
             // Social login case
-            account.setSocialLoginProvider(requestBody.getSocialLoginProvider());
+            account.setSocialAuthProvider(requestBody.getSocialAuthProvider());
             account.setSocialLoginId(requestBody.getSocialLoginId());
         }
 
@@ -403,7 +412,9 @@ public class AccountServiceIMPL implements AccountService {
         }
 
         // Generate verification link
+
         return emailVerificationBaseUri + urlPath + "?token=" + randomToken;
     }
+
 
 }
