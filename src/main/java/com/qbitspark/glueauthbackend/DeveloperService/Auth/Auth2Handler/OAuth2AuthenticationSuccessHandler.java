@@ -6,8 +6,8 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEnti
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.AccountType;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SocialProviders;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.AccountRepo;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.utils.CookieUtils;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeSecurity.JWTProvider;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Objects;
@@ -39,16 +41,17 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final CookieUtils cookieUtils;
 
     @Override
     @Transactional
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
 
         OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
         OAuth2User oauth2User = oauthToken.getPrincipal();
         String registrationId = oauthToken.getAuthorizedClientRegistrationId();
 
-        // Get an access token
+        // Get access token
         String accessToken = getAccessToken(oauthToken);
 
         // Map registrationId to your SocialProviders enum
@@ -74,17 +77,32 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String jwtAccessToken = tokenProvider.generateAccessToken(customAuth);
         String refreshToken = tokenProvider.generateRefreshToken(customAuth);
 
+        // Set character encoding
+        response.setCharacterEncoding("UTF-8");
+
         // Get original redirect from state parameter if available
         String redirectUrl = extractRedirectUrl(request.getParameter("state"));
+        boolean isNativeClient = false;
+
+        // Check if this is a native client (indicated by a special redirect URL or param)
+        if (redirectUrl != null && redirectUrl.contains("native=true")) {
+            isNativeClient = true;
+        }
+
         if (redirectUrl == null || redirectUrl.isEmpty()) {
             // Fallback to default URL
             redirectUrl = determineTargetUrl(request, response, authentication);
         }
 
-        // Append tokens to the redirect URL
-        redirectUrl = appendTokensToUrl(redirectUrl, jwtAccessToken, refreshToken);
+        if (isNativeClient) {
+            // For native clients, append tokens to the URL
+            redirectUrl = appendTokensToUrl(redirectUrl, jwtAccessToken, refreshToken);
+        } else {
+            // For web clients, set tokens as cookies
+            cookieUtils.addAuthCookies(response, jwtAccessToken, refreshToken);
+        }
 
-        log.info("Redirecting to: {}", redirectUrl);
+        log.info("Redirecting to: {}", redirectUrl.replaceAll("access_token=.*?(&|$)", "access_token=REDACTED$1"));
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 
@@ -95,7 +113,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         return client.getAccessToken().getTokenValue();
     }
-
 
     private String extractEmail(OAuth2User oauth2User, String registrationId, String accessToken) {
         if ("github".equals(registrationId)) {
@@ -119,7 +136,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
                     if (emailsNode.isArray()) {
                         for (JsonNode emailNode : emailsNode) {
-                            // Look for primary and verified email - removed non-breaking spaces
+                            // Look for primary and verified email
                             if (emailNode.has("primary") && emailNode.get("primary").asBoolean() &&
                                     emailNode.has("verified") && emailNode.get("verified").asBoolean()) {
                                 email = emailNode.get("email").asText();
@@ -154,7 +171,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         }
         return null;
     }
-
 
     private SocialProviders mapRegistrationIdToProvider(String registrationId) {
         if ("github".equals(registrationId)) {
@@ -231,10 +247,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         return accountRepo.save(newAccount);
     }
 
-
     //generate username from email
     private String generateUserName(String email) {
-
         StringBuilder username = new StringBuilder();
         for (int i = 0; i < email.length(); i++) {
             char c = email.charAt(i);
@@ -248,8 +262,26 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     }
 
     private String appendTokensToUrl(String url, String accessToken, String refreshToken) {
-        String separator = url.contains("?") ? "&" : "?";
-        return url + separator + "access_token=" + accessToken + "&refresh_token=" + refreshToken;
+        try {
+            String separator = url.contains("?") ? "&" : "?";
+            // Use URLEncoder to properly encode the tokens
+            String encodedAccessToken = URLEncoder.encode(accessToken, StandardCharsets.UTF_8.toString());
+            String encodedRefreshToken = URLEncoder.encode(refreshToken, StandardCharsets.UTF_8.toString());
+
+            // Remove the native flag if present
+            String cleanUrl = url.replace("native=true", "").replace("?&", "?").replace("&&", "&");
+            if (cleanUrl.endsWith("?") || cleanUrl.endsWith("&")) {
+                cleanUrl = cleanUrl.substring(0, cleanUrl.length() - 1);
+            }
+
+            return cleanUrl + separator + "access_token=" + encodedAccessToken + "&refresh_token=" + encodedRefreshToken;
+        } catch (Exception e) {
+            log.error("Error encoding tokens: {}", e.getMessage(), e);
+
+            // Fallback if encoding fails
+            String separator = url.contains("?") ? "&" : "?";
+            return url + separator + "access_token=" + accessToken + "&refresh_token=" + refreshToken;
+        }
     }
 
     private String extractRedirectUrl(String state) {
@@ -258,10 +290,26 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         }
 
         try {
-            return new String(Base64.getDecoder().decode(state));
+            // Use URL-safe Base64 decoding
+            return new String(Base64.getUrlDecoder().decode(state), StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.warn("Could not decode state parameter: {}", e.getMessage());
-            return null;
+            // If URL-safe decoding fails, try regular Base64 with some pre-processing
+            try {
+                // Replace URL-unsafe characters and add padding if needed
+                String normalized = state
+                        .replace('-', '+')
+                        .replace('_', '/');
+
+                // Add padding if needed
+                while (normalized.length() % 4 != 0) {
+                    normalized += "=";
+                }
+
+                return new String(Base64.getDecoder().decode(normalized), StandardCharsets.UTF_8);
+            } catch (Exception e2) {
+                log.warn("Could not decode state parameter: {}", e2.getMessage());
+                return null;
+            }
         }
     }
 }
