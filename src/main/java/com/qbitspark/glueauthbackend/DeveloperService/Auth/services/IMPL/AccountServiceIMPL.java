@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -42,6 +43,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountServiceIMPL implements AccountService {
@@ -109,10 +111,12 @@ public class AccountServiceIMPL implements AccountService {
             throw new AccountExistenceException("Account is locked");
         }
 
+
+
         // Generate token
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        account.getUsername(),
+                        generateUserName(account.getEmail()),
                         loginRequestBody.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);

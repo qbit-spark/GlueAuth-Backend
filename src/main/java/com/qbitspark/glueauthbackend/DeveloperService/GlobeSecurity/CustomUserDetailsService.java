@@ -35,7 +35,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                         .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
                         .collect(Collectors.toSet());
 
-        return new User(accountUser.getEmail(),
+        return new User(accountUser.getUsername(),
                 accountUser.getPasswordHash(),
                 authorities);
     }

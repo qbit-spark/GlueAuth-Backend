@@ -69,14 +69,13 @@ public class SecurityConfiguration {
                                 new AntPathRequestMatcher("/api/v1/account", HttpMethod.POST.toString()),
                                 new AntPathRequestMatcher("/api/v1/account/login", HttpMethod.POST.toString()),
                                 new AntPathRequestMatcher("/api/v1/account/logout", HttpMethod.POST.toString()),
-                                new AntPathRequestMatcher("/api/v1/auth/refresh", HttpMethod.POST.toString()),
+                                new AntPathRequestMatcher("/api/v1/account/refresh", HttpMethod.POST.toString()),
                                 new AntPathRequestMatcher("/api/account/oauth2/callback/*")
                         )
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/v1/account/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/account/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2

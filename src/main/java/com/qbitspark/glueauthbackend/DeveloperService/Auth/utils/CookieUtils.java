@@ -102,6 +102,7 @@ public class CookieUtils {
     private Optional<String> getCookieValue(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
 
+
         if (cookies == null) {
             return Optional.empty();
         }
