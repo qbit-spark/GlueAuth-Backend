@@ -31,10 +31,7 @@ public class CookieUtils {
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
 
     public void addAccessTokenCookie(HttpServletResponse response, String token) {
-        Cookie cookie = createCookie(ACCESS_TOKEN_COOKIE_NAME, token, accessTokenExpirySeconds);
-        response.addCookie(cookie);
-
-        // Add SameSite attribute via header
+        // Only use the header approach for setting cookies
         String cookieHeaderValue = String.format("%s=%s; Max-Age=%d; Path=/; Domain=%s; HttpOnly; %sSameSite=%s",
                 ACCESS_TOKEN_COOKIE_NAME,
                 token,
@@ -47,10 +44,7 @@ public class CookieUtils {
     }
 
     public void addRefreshTokenCookie(HttpServletResponse response, String token) {
-        Cookie cookie = createCookie(REFRESH_TOKEN_COOKIE_NAME, token, refreshTokenExpirySeconds);
-        response.addCookie(cookie);
-
-        // Add SameSite attribute via header
+        // Only use the header approach for setting cookies
         String cookieHeaderValue = String.format("%s=%s; Max-Age=%d; Path=/; Domain=%s; HttpOnly; %sSameSite=%s",
                 REFRESH_TOKEN_COOKIE_NAME,
                 token,
@@ -63,13 +57,7 @@ public class CookieUtils {
     }
 
     public void clearTokenCookies(HttpServletResponse response) {
-        Cookie accessTokenCookie = createCookie(ACCESS_TOKEN_COOKIE_NAME, "", 0);
-        Cookie refreshTokenCookie = createCookie(REFRESH_TOKEN_COOKIE_NAME, "", 0);
-
-        response.addCookie(accessTokenCookie);
-        response.addCookie(refreshTokenCookie);
-
-        // Clear via headers with SameSite attribute
+        // Only use the header approach for clearing cookies
         String accessCookieHeaderValue = String.format("%s=; Max-Age=0; Path=/; Domain=%s; HttpOnly; %sSameSite=%s",
                 ACCESS_TOKEN_COOKIE_NAME,
                 cookieDomain,
