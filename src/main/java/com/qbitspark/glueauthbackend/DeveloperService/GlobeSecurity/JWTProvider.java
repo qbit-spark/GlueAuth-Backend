@@ -52,7 +52,9 @@ public class JWTProvider {
     }
 
     public String generateAccessToken(Authentication authentication) {
+
         String userName = authentication.getName();
+
 
         Date currentDate = new Date();
         Date expirationDate = new Date(currentDate.getTime() + accessTokenExpirationMillis);
