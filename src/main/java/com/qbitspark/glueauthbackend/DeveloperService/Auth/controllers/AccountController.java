@@ -16,8 +16,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,11 +26,10 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Optional;
-import java.util.UUID;
-
 
 @RestController
 @RequiredArgsConstructor
@@ -42,6 +41,8 @@ public class AccountController {
     private final CookieUtils cookieUtil;
     private final AccountRepo accountRepo;
 
+    @Value("${app.frontend.baseUrl}")
+    private String frontendBaseUrl;
 
     // Create an account
     @PostMapping
@@ -50,54 +51,69 @@ public class AccountController {
         return ResponseEntity.ok(accountService.createAccount(requestBody));
     }
 
-    // Verify an account by email
+    // Verify an account by email - redirect to frontend after verification
     @GetMapping("/verify")
-    public ResponseEntity<GlobalJsonResponseBody> verifyAccountByEmail(@RequestParam String token, HttpServletResponse httpServletResponse) throws VerificationException {
-        return ResponseEntity.ok(accountService.verifyAccountByEmail(token, httpServletResponse));
+    public void verifyAccountByEmail(@RequestParam String token, HttpServletResponse response) throws VerificationException, IOException {
+        GlobalJsonResponseBody result = accountService.verifyAccountByEmail(token, response);
+
+        if (result.getSuccess()) {
+            // On success, redirect to frontend dashboard
+            response.sendRedirect(frontendBaseUrl + "/dashboard?verified=true");
+        } else {
+            // On failure, redirect to frontend error page
+            response.sendRedirect(frontendBaseUrl + "/error?reason=verification_failed");
+        }
     }
 
-    //Request password reset link
+    // Request password reset link
     @GetMapping("/password-reset-request")
     public ResponseEntity<GlobalJsonResponseBody> requestPasswordReset(@Valid @RequestParam String email) {
         GlobalJsonResponseBody response = accountService.sendPasswordResetLink(email);
         return ResponseEntity.ok(response);
     }
 
-    // Update password
+    // Reset password with redirect to frontend
     @PostMapping("/password-reset")
-    public ResponseEntity<GlobalJsonResponseBody> resetPassword(@Valid @RequestBody ResetPasswordRequestBody requestBody) throws VerificationException {
-        GlobalJsonResponseBody response = accountService.resetPassword(requestBody);
-        return ResponseEntity.ok(response);
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequestBody requestBody,
+                              HttpServletResponse response) throws VerificationException, IOException {
+        GlobalJsonResponseBody result = accountService.resetPassword(requestBody);
+
+        if (result.getSuccess()) {
+            // On success, redirect to frontend login page
+            response.sendRedirect(frontendBaseUrl + "/login?reset=success");
+        } else {
+            // On failure, redirect to frontend error page
+            response.sendRedirect(frontendBaseUrl + "/error?reason=reset_failed");
+        }
     }
 
-    //Login
+    // Login
     @PostMapping("/login")
     public ResponseEntity<GlobalJsonResponseBody> login(@Valid @RequestBody LoginRequestBody requestBody,
                                                         HttpServletResponse response) {
-
         return ResponseEntity.ok(accountService.login(requestBody, response));
     }
 
-    //Resend verification link
+    // Resend verification link
     @GetMapping("/resend-verification")
     public ResponseEntity<GlobalJsonResponseBody> resendVerificationLink(@RequestParam String email) {
         return ResponseEntity.ok(accountService.resendVerificationLink(email));
     }
 
-
+    // Generate OAuth authorization URL with frontend redirect
     @GetMapping("/authorization/{provider}")
-    public ResponseEntity<String> getAuthorizationUrl(
-            @PathVariable String provider,
-            @RequestParam String redirectUri,
-            HttpServletRequest request) {
+    public ResponseEntity<String> getAuthorizationUrl(@PathVariable String provider,
+                                                      @RequestParam(required = false) String redirectUri) {
         ClientRegistration registration = clientRegistrationRepository.findByRegistrationId(provider);
         if (registration == null) {
             return ResponseEntity.badRequest().body("Unknown provider: " + provider);
         }
 
-        // For now, just use a simple UUID as state and store the redirectUri in session
-        String state = UUID.randomUUID().toString();
-        request.getSession().setAttribute("OAUTH2_REDIRECT_" + state, redirectUri);
+        // If redirectUri is not provided, use default frontend URL
+        String finalRedirectUri = redirectUri == null ? frontendBaseUrl + "/oauth2/callback" : redirectUri;
+
+        // Encode redirectUri for state parameter
+        String state = generateState(finalRedirectUri);
 
         String authUrl = registration.getProviderDetails().getAuthorizationUri() +
                 "?client_id=" + registration.getClientId() +
@@ -109,26 +125,17 @@ public class AccountController {
         return ResponseEntity.ok(authUrl);
     }
 
+    private String generateState(String redirectUri) {
+        return Base64.getEncoder().encodeToString(redirectUri.getBytes());
+    }
 
     @PostMapping("/refresh")
     public ResponseEntity<GlobalJsonResponseBody> refreshToken(
             HttpServletRequest request,
             HttpServletResponse response) throws Exception {
 
-        // Debug: Print all cookies
-        Cookie[] cookies = request.getCookies();
-        System.out.println("Token refresh request received with cookies:");
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                System.out.println(" - Cookie: " + cookie.getName() + " (present)");
-            }
-        } else {
-            System.out.println(" - No cookies found in request");
-        }
-
         // Get refresh token from cookie
         Optional<String> refreshTokenOpt = cookieUtil.getRefreshTokenFromCookies(request);
-
 
         if (refreshTokenOpt.isEmpty()) {
             throw new TokenInvalidException("Refresh token not found");
@@ -170,20 +177,13 @@ public class AccountController {
         return ResponseEntity.ok(responseBody);
     }
 
-    //Logout
+    // Logout with frontend redirect
     @PostMapping("/logout")
-    public ResponseEntity<GlobalJsonResponseBody> logout(HttpServletRequest request, HttpServletResponse response) {
+    public void logout(HttpServletRequest request, HttpServletResponse response) throws IOException {
         // Clear cookies
         cookieUtil.clearTokenCookies(response);
 
-
-        GlobalJsonResponseBody responseBody = new GlobalJsonResponseBody();
-        responseBody.setSuccess(true);
-        responseBody.setHttpStatus(HttpStatus.OK);
-        responseBody.setMessage("Logged out successfully");
-        responseBody.setActionTime(LocalDateTime.now());
-
-        return ResponseEntity.ok(responseBody);
+        // Redirect to frontend login page
+        response.sendRedirect(frontendBaseUrl + "/login?logout=success");
     }
-
 }
