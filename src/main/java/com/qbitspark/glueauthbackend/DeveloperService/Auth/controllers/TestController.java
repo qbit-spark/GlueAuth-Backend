@@ -8,10 +8,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/test")
 public class TestController {
     // Test endpoint
-    @GetMapping("/hello")
+    @GetMapping("/hello-private")
     public String hello() {
-        return "Hello, World!";
+        return "Hello, Private world!";
     }
 
-    // Add more test endpoints as needed
+    // Add public methods for testing purposes
+    @GetMapping("/hello-public")
+    public String helloPublic() {
+        return "Hello, Public World!";
+    }
 }

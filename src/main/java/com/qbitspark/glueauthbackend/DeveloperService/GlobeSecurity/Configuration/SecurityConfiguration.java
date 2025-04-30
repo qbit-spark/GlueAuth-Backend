@@ -76,6 +76,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/v1/account/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/account/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/test/hello-public").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
