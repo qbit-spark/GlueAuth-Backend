@@ -113,11 +113,11 @@ public class GlobeControllerAdvice {
         return new ResponseEntity<>(globalJsonResponseBody, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<GlobalJsonResponseBody> handleAllExceptions(Exception exception) {
-        GlobalJsonResponseBody globalJsonResponseBody = getGlobalJsonResponseBodyAllExp(exception, HttpStatus.BAD_REQUEST);
-        return new ResponseEntity<>(globalJsonResponseBody, HttpStatus.BAD_REQUEST);
-    }
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<GlobalJsonResponseBody> handleAllExceptions(Exception exception) {
+//        GlobalJsonResponseBody globalJsonResponseBody = getGlobalJsonResponseBodyAllExp(exception, HttpStatus.BAD_REQUEST);
+//        return new ResponseEntity<>(globalJsonResponseBody, HttpStatus.BAD_REQUEST);
+//    }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<GlobalJsonResponseBody> generateAccessDeniedExceptionException(Exception exception) {

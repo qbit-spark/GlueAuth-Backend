@@ -82,23 +82,6 @@ public class CookieUtils {
         return getCookieValue(request, REFRESH_TOKEN_COOKIE_NAME);
     }
 
-    private Cookie createCookie(String name, String value, int maxAge) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(isSecured);
-        cookie.setPath("/");
-        cookie.setDomain(cookieDomain);
-        cookie.setMaxAge(maxAge);
-
-        // Set SameSite attribute - requires Servlet 5.0+ or custom approach
-        // In Jakarta Servlet 5.0+, you can use the following:
-        // cookie.setAttribute("SameSite", sameSite);
-
-        // For now, we'll set it using a response header in the methods that add cookies
-
-        return cookie;
-    }
-
     private Optional<String> getCookieValue(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
 

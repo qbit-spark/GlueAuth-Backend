@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.UUID;
 
 
 @RestController
@@ -85,15 +86,18 @@ public class AccountController {
 
 
     @GetMapping("/authorization/{provider}")
-    public ResponseEntity<String> getAuthorizationUrl(@PathVariable String provider,
-                                                      @RequestParam String redirectUri) {
+    public ResponseEntity<String> getAuthorizationUrl(
+            @PathVariable String provider,
+            @RequestParam String redirectUri,
+            HttpServletRequest request) {
         ClientRegistration registration = clientRegistrationRepository.findByRegistrationId(provider);
         if (registration == null) {
             return ResponseEntity.badRequest().body("Unknown provider: " + provider);
         }
 
-        // Encode redirectUri for state parameter
-        String state = generateState(redirectUri);
+        // For now, just use a simple UUID as state and store the redirectUri in session
+        String state = UUID.randomUUID().toString();
+        request.getSession().setAttribute("OAUTH2_REDIRECT_" + state, redirectUri);
 
         String authUrl = registration.getProviderDetails().getAuthorizationUri() +
                 "?client_id=" + registration.getClientId() +
@@ -105,9 +109,6 @@ public class AccountController {
         return ResponseEntity.ok(authUrl);
     }
 
-    private String generateState(String redirectUri) {
-        return Base64.getEncoder().encodeToString(redirectUri.getBytes());
-    }
 
     @PostMapping("/refresh")
     public ResponseEntity<GlobalJsonResponseBody> refreshToken(

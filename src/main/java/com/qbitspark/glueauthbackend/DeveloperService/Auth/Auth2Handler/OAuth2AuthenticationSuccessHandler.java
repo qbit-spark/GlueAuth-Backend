@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -26,10 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Base64;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -43,56 +44,60 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final ObjectMapper objectMapper;
     private final CookieUtils cookieUtil;
 
+    @Value("${app.oauth2.default-redirect-url}")
+    private String defaultRedirectUrl;
+
     @Override
     @Transactional
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+        try {
+            OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+            OAuth2User oauth2User = oauthToken.getPrincipal();
+            String registrationId = oauthToken.getAuthorizedClientRegistrationId();
 
-        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
-        OAuth2User oauth2User = oauthToken.getPrincipal();
-        String registrationId = oauthToken.getAuthorizedClientRegistrationId();
+            // Get an access token
+            String accessToken = getAccessToken(oauthToken);
 
-        // Get an access token
-        String accessToken = getAccessToken(oauthToken);
+            // Map registrationId to your SocialProviders enum
+            SocialProviders provider = mapRegistrationIdToProvider(registrationId);
 
-        // Map registrationId to your SocialProviders enum
-        SocialProviders provider = mapRegistrationIdToProvider(registrationId);
+            // Extract user info from OAuth2User
+            String socialId = Objects.requireNonNull(oauth2User.getAttribute("id")).toString();
+            String name = oauth2User.getAttribute("name");
+            String pictureUrl = oauth2User.getAttribute("avatar_url");
 
-        // Extract user info from OAuth2User
-        String socialId = Objects.requireNonNull(oauth2User.getAttribute("id")).toString();
-        String name = oauth2User.getAttribute("name");
-        String pictureUrl = oauth2User.getAttribute("avatar_url");
+            // Try to get email, including-from-emails API if needed
+            String email = extractEmail(oauth2User, registrationId, accessToken);
 
-        // Try to get email, including-from-emails API if needed
-        String email = extractEmail(oauth2User, registrationId, accessToken);
+            log.info("OAuth login: provider={}, socialId={}, email={}", provider, socialId, email);
 
-        log.info("OAuth login: provider={}, socialId={}, email={}", provider, socialId, email);
+            // Find or create an account
+            AccountEntity account = findOrCreateAccount(email, socialId, provider, name, pictureUrl);
 
-        // Find or create an account
-        AccountEntity account = findOrCreateAccount(email, socialId, provider, name, pictureUrl);
+            // Create our own authentication with JWT
+            Authentication customAuth = new UsernamePasswordAuthenticationToken(account.getUsername(), null, null);
 
-        // Create our own authentication with JWT
-        Authentication customAuth = new UsernamePasswordAuthenticationToken(account.getUsername(), null, null);
+            // Generate JWT tokens
+            String jwtAccessToken = tokenProvider.generateAccessToken(customAuth);
+            String refreshToken = tokenProvider.generateRefreshToken(customAuth);
 
-        // Generate JWT tokens
-        String jwtAccessToken = tokenProvider.generateAccessToken(customAuth);
-        String refreshToken = tokenProvider.generateRefreshToken(customAuth);
+            // Set the tokens as cookies
+            cookieUtil.addAccessTokenCookie(response, jwtAccessToken);
+            cookieUtil.addRefreshTokenCookie(response, refreshToken);
 
-        // Set the tokens as cookies
-        cookieUtil.addAccessTokenCookie(response, jwtAccessToken);
-        cookieUtil.addRefreshTokenCookie(response, refreshToken);
+            // Get original redirect from state parameter if available
+            String state = request.getParameter("state");
+            String redirectUrl = extractRedirectUrl(state, request);
 
-        // Get original redirect from state parameter if available
-        String redirectUrl = extractRedirectUrl(request.getParameter("state"));
-        if (redirectUrl == null || redirectUrl.isEmpty()) {
-            // Fallback to default URL
-            redirectUrl = determineTargetUrl(request, response, authentication);
+            log.info("Redirecting to: {}", redirectUrl);
+            getRedirectStrategy().sendRedirect(request, response, redirectUrl);
+        } catch (Exception e) {
+            log.error("Error in OAuth2 success handler", e);
+            response.sendRedirect(defaultRedirectUrl);
         }
-
-        log.info("Redirecting to: {}", redirectUrl);
-        getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 
-    // Rest of the methods remain the same...
+
     private String getAccessToken(OAuth2AuthenticationToken authentication) {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
@@ -191,16 +196,66 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         return username.toString();
     }
 
-    private String extractRedirectUrl(String state) {
+
+    private String extractRedirectUrl(String state, HttpServletRequest request) {
         if (state == null || state.isEmpty()) {
-            return null;
+            return defaultRedirectUrl;
         }
 
         try {
-            return new String(Base64.getDecoder().decode(state));
+            // Get the redirect URL from the session using the state parameter
+            String redirectUrl = (String) request.getSession().getAttribute("OAUTH2_REDIRECT_" + state);
+
+            // Clean up the session attribute to prevent session bloat
+            request.getSession().removeAttribute("OAUTH2_REDIRECT_" + state);
+
+            // If redirectUrl is null or empty, return default
+            if (redirectUrl == null || redirectUrl.isEmpty()) {
+                return defaultRedirectUrl;
+            }
+
+            // Validate the URL
+            if (redirectUrl.contains("\r") || redirectUrl.contains("\n")) {
+                log.warn("Redirect URL contains invalid characters");
+                return defaultRedirectUrl;
+            }
+
+            try {
+                new URL(redirectUrl);
+            } catch (Exception e) {
+                log.warn("Invalid redirect URL format: {}", redirectUrl);
+                return defaultRedirectUrl;
+            }
+
+            if (!isValidRedirectUrl(redirectUrl)) {
+                log.warn("Redirect URL not in allowed domains: {}", redirectUrl);
+                return defaultRedirectUrl;
+            }
+
+            return redirectUrl;
         } catch (Exception e) {
-            log.warn("Could not decode state parameter: {}", e.getMessage());
-            return null;
+            log.warn("Error extracting redirect URL from session: {}", e.getMessage());
+            return defaultRedirectUrl;
+        }
+    }
+
+    private boolean isValidRedirectUrl(String url) {
+        List<String> allowedDomains = Arrays.asList(
+                "app.glueauth.com",
+                "localhost:3000",
+                "localhost:8080"
+        );
+
+        try {
+            URL parsedUrl = new URL(url);
+            String host = parsedUrl.getHost();
+            int port = parsedUrl.getPort();
+            String hostWithPort = host + (port != -1 ? ":" + port : "");
+
+            return allowedDomains.stream()
+                    .anyMatch(domain -> hostWithPort.equals(domain) || host.endsWith("." + domain));
+        } catch (Exception e) {
+            return false;
         }
     }
 
