@@ -13,6 +13,7 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.RoleRepo;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.repos.VerificationTokenRepo;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.services.AccountService;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.AccountExistenceException;
+import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.TokenInvalidException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeEmailService.EmailService;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
@@ -27,15 +28,21 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -280,6 +287,42 @@ public class AccountServiceIMPL implements AccountService {
         return null;
     }
 
+    @Override
+    public GlobalJsonResponseBody refreshToken(String refreshToken) throws Exception {
+        // Validate refresh token
+        if (!tokenProvider.validToken(refreshToken, "REFRESH")) {
+            throw new TokenInvalidException("Invalid token");
+        }
+
+        // Get username from a token
+        String userName = tokenProvider.getUserName(refreshToken);
+
+        // Retrieve user from database
+        AccountEntity user = accountRepo.findByUsername(userName)
+                .orElseThrow(() -> new AccountExistenceException("Account associated to refresh token not exist"));
+
+
+        // Create authentication with user authorities
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user.getUsername(),
+                null,
+                mapRolesToAuthorities(user.getRoles())
+        );
+
+        // Generate only a new token,
+        String newAccessToken = tokenProvider.generateAccessToken(authentication);
+        String newRefreshToken = tokenProvider.generateRefreshToken(authentication);
+
+
+        // Build response
+        RefreshTokenResponse refreshTokenResponse = new RefreshTokenResponse();
+        refreshTokenResponse.setNewToken(newAccessToken);
+        refreshTokenResponse.setRefreshToken(newRefreshToken);
+
+
+        return generateSuccessResponseBody("Token refreshed successfully", refreshTokenResponse, HttpStatus.OK);
+    }
+
     //generate response body
     private GlobalJsonResponseBody generateSuccessResponseBody(String message, Object data, HttpStatus statusCode) {
         return new GlobalJsonResponseBody(
@@ -406,4 +449,9 @@ public class AccountServiceIMPL implements AccountService {
         return emailVerificationBaseUri + urlPath + "?token=" + randomToken;
     }
 
+    private Collection<? extends GrantedAuthority> mapRolesToAuthorities(Set<AccountRoles> roles) {
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
+                .collect(Collectors.toList());
+    }
 }

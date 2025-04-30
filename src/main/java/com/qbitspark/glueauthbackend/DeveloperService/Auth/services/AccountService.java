@@ -4,6 +4,7 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.CreateAccoun
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.LoginRequestBody;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.ResetPasswordRequestBody;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.UpdateAccountRequestBody;
+import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.TokenInvalidException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
 
@@ -43,4 +44,5 @@ public interface AccountService {
     // Method to get account by email
     GlobalJsonResponseBody getAccountByEmail(String email);
 
+    GlobalJsonResponseBody refreshToken(String refreshToken) throws Exception;
 }

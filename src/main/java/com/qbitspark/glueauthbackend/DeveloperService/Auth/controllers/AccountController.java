@@ -2,6 +2,7 @@ package com.qbitspark.glueauthbackend.DeveloperService.Auth.controllers;
 
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.CreateAccountRequestBody;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.LoginRequestBody;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.RefreshTokenRequestBody;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.ResetPasswordRequestBody;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.services.AccountService;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/account")
 public class AccountController {
+
     private final AccountService accountService;
 
     // Create an account
@@ -57,4 +59,9 @@ public class AccountController {
         return ResponseEntity.ok(accountService.resendVerificationLink(email));
     }
 
+    //Refresh tokes
+    @PostMapping("/refresh-token")
+    public ResponseEntity<GlobalJsonResponseBody> refreshToken(@RequestBody RefreshTokenRequestBody requestBody) throws Exception {
+        return ResponseEntity.ok(accountService.refreshToken(requestBody.getRefreshToken()));
+    }
 }

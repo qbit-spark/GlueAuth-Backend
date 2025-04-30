@@ -1,5 +1,6 @@
 package com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.AccountType;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.OrganizationSize;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SubscriptionStatus;
@@ -8,7 +9,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import net.minidev.json.annotate.JsonIgnore;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
