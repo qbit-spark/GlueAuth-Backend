@@ -2,7 +2,7 @@ package com.qbitspark.glueauthbackend.Oauth2Server.Clients.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.Entities.DirectoryEntity;
-import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.UserEntity;
+import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.DirectoryUserEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.ApplicationType;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.GrantType;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.TokenFormat;
@@ -93,7 +93,7 @@ public class ClientAppEntity {
             joinColumns = @JoinColumn(name = "client_app_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<UserEntity> assignedUsers = new HashSet<>();
+    private Set<DirectoryUserEntity> assignedUsers = new HashSet<>();
 
 
     private Integer accessTokenLifetime = 3600;  // 1 hour in seconds

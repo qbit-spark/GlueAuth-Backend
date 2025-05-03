@@ -1,10 +1,9 @@
 package com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities;
 
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.Entities.DirectoryEntity;
 
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Embeds.UserIdentity;
-import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.IdentityType;
-import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.Provider;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,18 +14,17 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 @Entity
 @Table(name = "directory_users")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserEntity {
+public class DirectoryUserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
     @Column(unique = true)
     private String username;
@@ -38,7 +36,6 @@ public class UserEntity {
     private String phoneNumber;
 
     private String password;
-
 
     @Column(nullable = false)
     private boolean enabled = true;
@@ -73,6 +70,5 @@ public class UserEntity {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-
 
 }
