@@ -1,6 +1,7 @@
 package com.qbitspark.glueauthbackend.Oauth2Server.Directory.Entities;
 
-import com.qbitspark.glueauthbackend.Oauth2Server.Clients.Entities.ClientAppEntity;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEntity;
+import com.qbitspark.glueauthbackend.Oauth2Server.Clients.entities.ClientAppEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.UserEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -35,12 +36,15 @@ public class DirectoryEntity {
     @Column(nullable = false)
     private Boolean isActive = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", nullable = false)
+    private AccountEntity owner;
+
     @Column(columnDefinition = "jsonb")
     private String settings;
 
     @OneToMany(mappedBy = "directory", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<ClientAppEntity> clientApps = new HashSet<>();
-
 
     @OneToMany(mappedBy = "directory", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<UserEntity> users = new HashSet<>();

@@ -16,7 +16,7 @@ import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.Acc
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.TokenInvalidException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeEmailService.EmailService;
-import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
+import com.qbitspark.glueauthbackend.GlobeResponseBody.GlobalJsonResponseBody;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeSecurity.JWTProvider;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ValidationException;
@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;

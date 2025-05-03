@@ -4,9 +4,8 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.CreateAccoun
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.LoginRequestBody;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.ResetPasswordRequestBody;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.UpdateAccountRequestBody;
-import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.TokenInvalidException;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
-import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
+import com.qbitspark.glueauthbackend.GlobeResponseBody.GlobalJsonResponseBody;
 
 import java.util.UUID;
 

@@ -6,9 +6,8 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.RefreshToken
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.payloads.ResetPasswordRequestBody;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.services.AccountService;
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.VerificationException;
-import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
+import com.qbitspark.glueauthbackend.GlobeResponseBody.GlobalJsonResponseBody;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
