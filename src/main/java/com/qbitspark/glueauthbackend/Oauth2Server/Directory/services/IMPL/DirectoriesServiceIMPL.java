@@ -10,6 +10,7 @@ import com.qbitspark.glueauthbackend.Oauth2Server.Directory.payloads.*;
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.repos.DirectoryRepo;
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.services.DirectoriesService;
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.utils.Settings;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -17,10 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -31,8 +29,14 @@ public class DirectoriesServiceIMPL implements DirectoriesService {
     private final DirectoryRepo directoryRepo;
 
     @Override
+    @Transactional
     public DirectoryEntity createDirectory(CreateDirectoryRequest request) {
         AccountEntity loginAccount = getAuthenticatedAccount();
+
+        // Check if the directory name already exists for the authenticated user
+        if (directoryRepo.existsDirectoryEntitiesByOwnerAndName(loginAccount, request.getName())) {
+            throw new AccountExistenceException("Directory with the same name already exists");
+        }
 
         DirectoryEntity directory = new DirectoryEntity();
         directory.setName(request.getName());
@@ -66,6 +70,36 @@ public class DirectoriesServiceIMPL implements DirectoriesService {
         }
 
         return directoryRepo.save(directory);
+    }
+
+    @Override
+    public List<DirectoryEntity> getAllDirectories() {
+        return directoryRepo.findAll();
+    }
+
+    @Override
+    public List<DirectoryEntity> getAllDirectoriesByAccount(AccountEntity account) {
+        return directoryRepo.findDirectoryEntitiesByOwner(account);
+    }
+
+    @Override
+    public DirectoryEntity getDirectoryById(UUID id) {
+        return directoryRepo.findDirectoryEntityById(id)
+                .orElseThrow(() -> new AccountExistenceException("Directory with given id does not exist"));
+    }
+
+    @Override
+    public DirectoryEntity getDirectoryByIdAndAccount(UUID id) {
+        AccountEntity authenticatedAccount = getAuthenticatedAccount();
+        return directoryRepo.findDirectoryEntityByIdAndOwner(id, authenticatedAccount)
+                .orElseThrow(() -> new AccountExistenceException("Directory with given id does not exist for this account"));
+    }
+
+    @Override
+    public List<DirectoryEntity> getDirectoriesByLoginAccount() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        AccountEntity authenticatedAccount = extractAccount(authentication);
+        return directoryRepo.findDirectoryEntitiesByOwner(authenticatedAccount);
     }
 
     private AccountEntity getAuthenticatedAccount() {

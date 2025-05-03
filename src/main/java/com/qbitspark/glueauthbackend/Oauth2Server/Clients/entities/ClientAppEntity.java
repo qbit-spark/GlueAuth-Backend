@@ -1,5 +1,6 @@
 package com.qbitspark.glueauthbackend.Oauth2Server.Clients.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.Entities.DirectoryEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.UserEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.ApplicationType;
@@ -80,6 +81,7 @@ public class ClientAppEntity {
     private Boolean hasCustomSettings = false;
 
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "directory_id", nullable = false)
     private DirectoryEntity directory;
