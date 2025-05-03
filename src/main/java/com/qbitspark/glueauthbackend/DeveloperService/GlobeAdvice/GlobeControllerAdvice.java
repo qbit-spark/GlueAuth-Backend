@@ -2,7 +2,7 @@ package com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice;
 
 import com.qbitspark.glueauthbackend.DeveloperService.GlobeAdvice.Exceptions.*;
 
-import com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody.GlobalJsonResponseBody;
+import com.qbitspark.glueauthbackend.GlobeResponseBody.GlobalJsonResponseBody;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 

@@ -1,4 +1,4 @@
-package com.qbitspark.glueauthbackend.DeveloperService.GlobeResponseBody;
+package com.qbitspark.glueauthbackend.GlobeResponseBody;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

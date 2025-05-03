@@ -1,4 +1,4 @@
-package com.qbitspark.glueauthbackend.Oauth2Server.Clients.Entities;
+package com.qbitspark.glueauthbackend.Oauth2Server.Clients.entities;
 
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.Entities.DirectoryEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.UserEntity;
