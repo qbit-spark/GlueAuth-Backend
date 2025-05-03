@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Clients.entities.ClientAppEntity;
-import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.UserEntity;
+import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.DirectoryUserEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -57,7 +57,7 @@ public class DirectoryEntity {
 
     @JsonIgnore
     @OneToMany(mappedBy = "directory", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<UserEntity> users = new HashSet<>();
+    private Set<DirectoryUserEntity> users = new HashSet<>();
 
     @CreationTimestamp
     private LocalDateTime createdAt;
