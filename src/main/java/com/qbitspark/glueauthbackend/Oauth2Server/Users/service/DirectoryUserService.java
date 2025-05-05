@@ -1,8 +1,10 @@
 package com.qbitspark.glueauthbackend.Oauth2Server.Users.service;
 
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.DirectoryUserEntity;
+import com.qbitspark.glueauthbackend.Oauth2Server.Users.payloads.DirectoryUserRequest;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface DirectoryUserService {
 
@@ -12,9 +14,9 @@ public interface DirectoryUserService {
 
     DirectoryUserEntity findByPhoneNumber(String phoneNumber);
 
-    DirectoryUserEntity findById(String id);
+    DirectoryUserEntity findById(UUID id);
 
-    DirectoryUserEntity save(DirectoryUserEntity directoryUserEntity);
+    DirectoryUserEntity save(DirectoryUserRequest request);
 
     void deleteById(String id);
 
@@ -22,6 +24,6 @@ public interface DirectoryUserService {
 
     List<DirectoryUserEntity> findAll();
 
-    List<DirectoryUserEntity> findAllByDirectoryId(String directoryId);
+    List<DirectoryUserEntity> findAllByDirectoryId(UUID directoryId);
 
 }

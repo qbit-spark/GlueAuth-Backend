@@ -5,10 +5,13 @@ import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.DirectoryUserEn
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.UUID;
 
-public interface DirectoryUserRepo extends JpaRepository<DirectoryUserEntity, String> {
+public interface DirectoryUserRepo extends JpaRepository<DirectoryUserEntity, UUID> {
 
     List<DirectoryUserEntity> findAllByDirectory(DirectoryEntity directory);
+
+    boolean existsByUsernameAndDirectory(String username, DirectoryEntity directory);
 
     DirectoryUserEntity findByUsername(String username);
 
@@ -16,6 +19,6 @@ public interface DirectoryUserRepo extends JpaRepository<DirectoryUserEntity, St
 
     DirectoryUserEntity findByPhoneNumber(String phoneNumber);
 
-    void deleteById(String id);
+   // void deleteById(UUID id);
 
 }
