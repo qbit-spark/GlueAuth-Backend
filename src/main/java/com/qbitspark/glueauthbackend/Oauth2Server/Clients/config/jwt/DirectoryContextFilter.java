@@ -6,6 +6,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
@@ -23,12 +25,13 @@ import java.util.regex.Pattern;
  * 2. Request header "X-Directory-ID"
  * 3. URL path for REST endpoints in the format "/directories/{directoryId}/..."
  */
+
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RequiredArgsConstructor
 public class DirectoryContextFilter extends OncePerRequestFilter {
 
-    private static final Pattern PATH_PATTERN = Pattern.compile("/directories/([a-f0-9-]+)/");
+    private static final Logger logger = LoggerFactory.getLogger(DirectoryContextFilter.class);
 
     @Override
     protected void doFilterInternal(
@@ -37,66 +40,37 @@ public class DirectoryContextFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            // Try to get directory_id from request parameter
+            // Try to get directory_id from request parameter (GET)
             String directoryIdStr = request.getParameter("directory_id");
+
+            // If not found in parameters, check if this is a POST form submission
+            if ((directoryIdStr == null || directoryIdStr.isEmpty()) && "POST".equals(request.getMethod())) {
+                directoryIdStr = request.getParameter("directory_id");
+                logger.debug("Looking for directory ID in POST form data: {}", directoryIdStr);
+            }
+
+            // Also check for directory_id in a header (for API calls)
+            if (directoryIdStr == null || directoryIdStr.isEmpty()) {
+                directoryIdStr = request.getHeader("X-Directory-ID");
+                logger.debug("Looking for directory ID in header: {}", directoryIdStr);
+            }
 
             if (directoryIdStr != null && !directoryIdStr.isEmpty()) {
                 try {
                     UUID directoryId = UUID.fromString(directoryIdStr);
                     DirectoryContextHolder.setDirectoryId(directoryId);
-                    // Log successful directory context setting
-                    System.out.println("🚨🚨🚨 Directory ID set from request parameter: " + directoryId);
+                    logger.info("Directory ID set in context filter: {}", directoryId);
                 } catch (IllegalArgumentException e) {
-                    System.out.println("Invalid directory ID format in request parameter: " + directoryIdStr);
+                    logger.warn("Invalid directory ID format: {}", directoryIdStr);
                 }
             } else {
-                logger.debug("No directory_id parameter found in request");
+                logger.debug("No directory_id found in request");
             }
 
             filterChain.doFilter(request, response);
         } finally {
             // Always clear the context after the request is processed
             DirectoryContextHolder.clear();
-        }
-    }
-
-    private void extractFromParameter(HttpServletRequest request) {
-        String directoryParam = request.getParameter("directory_id");
-        if (directoryParam != null && !directoryParam.isEmpty()) {
-            try {
-                UUID directoryId = UUID.fromString(directoryParam);
-                DirectoryContextHolder.setDirectoryId(directoryId);
-                System.out.println("🚨🚨🚨 Directory ID set from request parameter: " + directoryId);
-            } catch (IllegalArgumentException e) {
-                System.out.println("Invalid directory ID format in request parameter: " + directoryParam);
-            }
-        }
-    }
-
-    private void extractFromHeader(HttpServletRequest request) {
-        String directoryHeader = request.getHeader("X-Directory-ID");
-        if (directoryHeader != null && !directoryHeader.isEmpty()) {
-            try {
-                UUID directoryId = UUID.fromString(directoryHeader);
-                DirectoryContextHolder.setDirectoryId(directoryId);
-                System.out.println("Directory ID set from request header: " + directoryId);
-            } catch (IllegalArgumentException e) {
-                System.out.println("Invalid directory ID format in request header: " + directoryHeader);
-            }
-        }
-    }
-
-    private void extractFromPath(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        Matcher matcher = PATH_PATTERN.matcher(uri);
-        if (matcher.find()) {
-            try {
-                UUID directoryId = UUID.fromString(matcher.group(1));
-                DirectoryContextHolder.setDirectoryId(directoryId);
-                System.out.println("Directory ID set from URL path: " + directoryId);
-            } catch (IllegalArgumentException e) {
-                System.out.println("Invalid directory ID format in URL path: " + matcher.group(1));
-            }
         }
     }
 }

@@ -17,10 +17,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
@@ -35,7 +35,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
@@ -65,6 +64,8 @@ public class OAuth2ServerConfig {
     @Value("${app.security.rsa.private-key}")
     private String privateKeyString;
 
+    private final AuthenticationConfiguration authenticationConfiguration;
+
 
     @Bean
     @Order(1)
@@ -79,7 +80,7 @@ public class OAuth2ServerConfig {
                 .securityMatcher("/oauth2/**", "/login", "/custom-login")
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(endpointsMatcher)
-                        .ignoringRequestMatchers("/login")  // Use separate call for a string pattern
+                        .ignoringRequestMatchers("/login")
                 )
                 .with(authorizationServerConfigurer, (authorizationServer) -> {
                     // Add token customizer to include directory claims
@@ -109,17 +110,14 @@ public class OAuth2ServerConfig {
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling((exceptions) -> exceptions
-                        // For HTML browser requests - redirect to login
                         .defaultAuthenticationEntryPointFor(
                                 new LoginUrlAuthenticationEntryPoint("/custom-login"),
                                 new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
                         )
-                        // For API requests - return 401 with WWW-Authenticate header
                         .defaultAuthenticationEntryPointFor(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                 new MediaTypeRequestMatcher(MediaType.APPLICATION_JSON)
                         )
-                        // Optional: Custom access denied handler (for 403 Forbidden)
                         .accessDeniedPage("/access-denied")
                 )
                 .formLogin(form -> form
@@ -130,6 +128,7 @@ public class OAuth2ServerConfig {
                 )
                 .userDetailsService(userDetailsService);
 
+        // Add only the directory context filter at the appropriate position
         http.addFilterBefore(directoryContextFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
