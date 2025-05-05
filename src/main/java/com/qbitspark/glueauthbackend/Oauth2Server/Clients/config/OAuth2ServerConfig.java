@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
@@ -34,7 +35,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -70,16 +73,15 @@ public class OAuth2ServerConfig {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 new OAuth2AuthorizationServerConfigurer();
 
-        // Add directory context filter before authentication
-        http.addFilterBefore(directoryContextFilter, UsernamePasswordAuthenticationFilter.class);
+        RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
 
         http
-                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+                .securityMatcher("/oauth2/**", "/login", "/custom-login")
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers(authorizationServerConfigurer.getEndpointsMatcher())
+                        .ignoringRequestMatchers(endpointsMatcher)
+                        .ignoringRequestMatchers("/login")  // Use separate call for a string pattern
                 )
                 .with(authorizationServerConfigurer, (authorizationServer) -> {
-
                     // Add token customizer to include directory claims
                     authorizationServer.tokenGenerator(tokenGenerator(jwkSource()));
 
@@ -103,16 +105,35 @@ public class OAuth2ServerConfig {
                 })
                 .authorizeHttpRequests((authorize) ->
                         authorize
+                                .requestMatchers("/custom-login", "/error", "/login").permitAll()
                                 .anyRequest().authenticated()
                 )
-                .formLogin(Customizer.withDefaults()) // Use the built-in login page
+                .exceptionHandling((exceptions) -> exceptions
+                        // For HTML browser requests - redirect to login
+                        .defaultAuthenticationEntryPointFor(
+                                new LoginUrlAuthenticationEntryPoint("/custom-login"),
+                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
+                        )
+                        // For API requests - return 401 with WWW-Authenticate header
+                        .defaultAuthenticationEntryPointFor(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                                new MediaTypeRequestMatcher(MediaType.APPLICATION_JSON)
+                        )
+                        // Optional: Custom access denied handler (for 403 Forbidden)
+                        .accessDeniedPage("/access-denied")
+                )
+                .formLogin(form -> form
+                        .loginPage("/custom-login")
+                        .loginProcessingUrl("/login")
+                        .defaultSuccessUrl("/home", true)
+                        .permitAll()
+                )
                 .userDetailsService(userDetailsService);
+
+        http.addFilterBefore(directoryContextFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-
-
 
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
