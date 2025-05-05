@@ -37,23 +37,25 @@ public class DirectoryContextFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            // First try to get from request parameter
-            extractFromParameter(request);
+            // Try to get directory_id from request parameter
+            String directoryIdStr = request.getParameter("directory_id");
 
-            // If not found, try request header
-            if (DirectoryContextHolder.getDirectoryId() == null) {
-                extractFromHeader(request);
+            if (directoryIdStr != null && !directoryIdStr.isEmpty()) {
+                try {
+                    UUID directoryId = UUID.fromString(directoryIdStr);
+                    DirectoryContextHolder.setDirectoryId(directoryId);
+                    // Log successful directory context setting
+                    System.out.println("🚨🚨🚨 Directory ID set from request parameter: " + directoryId);
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Invalid directory ID format in request parameter: " + directoryIdStr);
+                }
+            } else {
+                logger.debug("No directory_id parameter found in request");
             }
 
-            // If still not found, try URL path
-            if (DirectoryContextHolder.getDirectoryId() == null) {
-                extractFromPath(request);
-            }
-
-            // Continue filter chain
             filterChain.doFilter(request, response);
         } finally {
-            // Always clear context after request completes
+            // Always clear the context after the request is processed
             DirectoryContextHolder.clear();
         }
     }
@@ -64,7 +66,7 @@ public class DirectoryContextFilter extends OncePerRequestFilter {
             try {
                 UUID directoryId = UUID.fromString(directoryParam);
                 DirectoryContextHolder.setDirectoryId(directoryId);
-                System.out.println("Directory ID set from request parameter: " + directoryId);
+                System.out.println("🚨🚨🚨 Directory ID set from request parameter: " + directoryId);
             } catch (IllegalArgumentException e) {
                 System.out.println("Invalid directory ID format in request parameter: " + directoryParam);
             }

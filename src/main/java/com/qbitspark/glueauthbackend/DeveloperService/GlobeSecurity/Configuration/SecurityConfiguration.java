@@ -48,10 +48,9 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    @Order(2) // Make sure this runs after OAuth2 config
+    @Order(2)
     SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity
-                // Make sure this doesn't conflict with OAuth2 endpoints
                 .securityMatcher("/api/v1/**", "/images/**") // Only match API patterns
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) -> authorize

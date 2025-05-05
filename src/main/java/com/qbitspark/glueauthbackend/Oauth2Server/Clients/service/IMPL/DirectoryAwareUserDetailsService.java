@@ -30,6 +30,7 @@ public class DirectoryAwareUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+
         // Get directory ID from the context holder
         UUID directoryId = DirectoryContextHolder.getDirectoryId();
         if (directoryId == null) {
