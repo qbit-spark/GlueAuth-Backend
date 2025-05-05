@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
@@ -61,6 +62,7 @@ public class OAuth2ServerConfig {
     @Value("${app.security.rsa.private-key}")
     private String privateKeyString;
 
+
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
@@ -72,15 +74,11 @@ public class OAuth2ServerConfig {
         http.addFilterBefore(directoryContextFilter, UsernamePasswordAuthenticationFilter.class);
 
         http
-                // ONLY use the OAuth2 server endpoints matcher to prevent conflicts
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(authorizationServerConfigurer.getEndpointsMatcher())
                 )
                 .with(authorizationServerConfigurer, (authorizationServer) -> {
-                    // Enable the consent page with directory context
-                    authorizationServer.authorizationEndpoint(authorizationEndpoint ->
-                            authorizationEndpoint.consentPage("/oauth2/consent"));
 
                     // Add token customizer to include directory claims
                     authorizationServer.tokenGenerator(tokenGenerator(jwkSource()));
@@ -105,52 +103,16 @@ public class OAuth2ServerConfig {
                 })
                 .authorizeHttpRequests((authorize) ->
                         authorize
-                                .requestMatchers("/oauth2/consent").permitAll()
                                 .anyRequest().authenticated()
                 )
-                .exceptionHandling((exceptions) -> exceptions
-                        // For HTML browser requests - redirect to login with directory context
-                        .defaultAuthenticationEntryPointFor(
-                                new LoginUrlAuthenticationEntryPoint("/auth/login"),
-                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-                        )
-                        // For API requests - return 401 with WWW-Authenticate header
-                        .defaultAuthenticationEntryPointFor(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                                new MediaTypeRequestMatcher(MediaType.APPLICATION_JSON)
-                        )
-                        // Custom access denied handler (for 403 Forbidden)
-                        .accessDeniedPage("/access-denied")
-                )
-                // Set directory-aware user details service
+                .formLogin(Customizer.withDefaults()) // Use the built-in login page
                 .userDetailsService(userDetailsService);
 
         return http.build();
     }
 
-    @Bean
-    @Order(2)
-    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        // Add directory context filter before authentication
-        http.addFilterBefore(directoryContextFilter, UsernamePasswordAuthenticationFilter.class);
 
-        http
-                // Define specific URL patterns this chain will handle
-                .securityMatcher("/auth/**", "/api/v1/account/**", "/assets/**", "/webjars/**")
-                .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers("/api/v1/account/**").permitAll()
-                        .requestMatchers("/auth/login", "/auth/register", "/auth/error").permitAll()
-                        .requestMatchers("/assets/**", "/webjars/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .formLogin(login -> login
-                        .loginPage("/auth/login")
-                        .loginProcessingUrl("/auth/login-process")
-                        .failureUrl("/auth/error")
-                );
 
-        return http.build();
-    }
 
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
@@ -208,7 +170,8 @@ public class OAuth2ServerConfig {
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder()
-                .issuer("https://auth.glueauth.com")
+               // .issuer("https://auth.glueauth.com")
+                .issuer("http://localhost:8083")
                 .build();
     }
 

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -47,15 +48,16 @@ public class SecurityConfiguration {
     }
 
     @Bean
+    @Order(2) // Make sure this runs after OAuth2 config
     SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.csrf(AbstractHttpConfigurer::disable)
+        httpSecurity
+                // Make sure this doesn't conflict with OAuth2 endpoints
+                .securityMatcher("/api/v1/**", "/images/**") // Only match API patterns
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/v1/account/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/account/**").permitAll()
-
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
-
-
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session
@@ -65,6 +67,5 @@ public class SecurityConfiguration {
 
         return httpSecurity.build();
     }
-
 
 }
