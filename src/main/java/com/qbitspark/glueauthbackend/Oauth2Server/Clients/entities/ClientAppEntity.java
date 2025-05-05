@@ -1,6 +1,8 @@
 package com.qbitspark.glueauthbackend.Oauth2Server.Clients.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.Entities.DirectoryEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.DirectoryUserEntity;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.ApplicationType;
@@ -15,9 +17,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -29,105 +29,45 @@ public class ClientAppEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(length = 1000)
-    private String description;
-
-    @Column(nullable = false, unique = true)
+    @Column(name = "client_id", unique = true, nullable = false)
     private String clientId;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "client_name", nullable = false)
+    private String clientName;
+
+    @Column(name = "client_secret", nullable = false)
     private String clientSecret;
 
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private ApplicationType applicationType;
+    @Column(name = "authorization_grant_type", nullable = false)
+    private String authorizationGrantType;
 
-    @Column(nullable = false)
-    private Boolean isActive = true;
+    @Column(name = "redirect_uri", nullable = false)
+    private String redirectUri;
 
+    @Column(name = "require_proof_key", nullable = false)
+    private boolean requireProofKey;
 
-    @Column(columnDefinition = "jsonb")
-    private String redirectUris;
-
-
-    @ElementCollection
-    @CollectionTable(
-            name = "client_grant_types",
-            joinColumns = @JoinColumn(name = "client_app_id")
-    )
-    @Enumerated(EnumType.STRING)
-    private Set<GrantType> allowedGrantTypes = new HashSet<>();
+    @Column(name = "token_format", nullable = false)
+    private String tokenFormat;
 
 
-    @Enumerated(EnumType.STRING)
-    private TokenFormat accessTokenFormat ;
-
-    @Enumerated(EnumType.STRING)
-    private TokenFormat refreshTokenFormat;
-
-
-    private String tokenSigningAlgorithm = "RS256";
-
-
-    @Column(columnDefinition = "jsonb")
-    private String settings;
-
-
-    private Boolean hasCustomSettings = false;
-
-
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "directory_id", nullable = false)
+    @JsonIgnoreProperties({"name", "description", "isActive", "settings",
+            "clientApps", "users", "createdAt", "updatedAt", "owner",
+            "hibernateLazyInitializer", "handler"})
     private DirectoryEntity directory;
 
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "client_app_users",
-            joinColumns = @JoinColumn(name = "client_app_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<DirectoryUserEntity> assignedUsers = new HashSet<>();
-
-
-    private Integer accessTokenLifetime = 3600;  // 1 hour in seconds
-    private Integer refreshTokenLifetime = 2592000;  // 30 days in seconds
-    private Integer idTokenLifetime = 3600; // 1 hour in seconds
-
-
-    private Boolean pkceRequired = false;
-    private Boolean consentRequired = false;
-    private Boolean rotateRefreshToken = true;
-
-
-    private Integer authCodeLifetime = 60; // 1 minute in seconds
-    private Integer deviceCodeLifetime = 600; // 10 minutes in seconds
-
-
-    @Column(columnDefinition = "jsonb")
-    private String allowedCorsOrigins;
-
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
-
-    @Column(length = 100)
-    private String createdBy;
-
-    @Column(length = 100)
-    private String updatedBy;
-
-
-    private Long totalLogins = 0L;
-    private LocalDateTime lastAccessedAt;
+    @JsonIgnoreProperties({"email", "passwordHash", "emailVerified", "accountName",
+            "accountType", "organizationName", "organizationSize", "profilePictureUrl",
+            "phoneNumber", "phoneVerified", "twoFactorEnabled", "socialAuthProvider",
+            "socialLoginId", "lastLogin", "createdAt", "updatedAt", "subscriptionTier",
+            "subscriptionStatus", "active", "locked", "lockedReason", "roles","socialLoginProvider",
+            "teamMemberships", "ownedTeams", "hibernateLazyInitializer", "handler"})
+    @ManyToOne
+    @JoinColumn(name = "owner_id", nullable = false)
+    private AccountEntity owner;
 
 }

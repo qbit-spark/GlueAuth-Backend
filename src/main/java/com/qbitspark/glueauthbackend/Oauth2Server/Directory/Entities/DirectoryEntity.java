@@ -14,9 +14,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -53,11 +51,11 @@ public class DirectoryEntity {
 
 
     @OneToMany(mappedBy = "directory", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<ClientAppEntity> clientApps = new HashSet<>();
+    private List<ClientAppEntity> clientApps = new ArrayList<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "directory", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<DirectoryUserEntity> users = new HashSet<>();
+    private List<DirectoryUserEntity> users = new ArrayList<>();
 
     @CreationTimestamp
     private LocalDateTime createdAt;
