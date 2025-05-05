@@ -1,8 +1,13 @@
-package com.qbitspark.glueauthbackend.Oauth2Server.Directory.utils;
+package com.qbitspark.glueauthbackend.Oauth2Server.Clients.utils;
 
 import java.util.UUID;
 
+/**
+ * Holds directory context in a ThreadLocal variable.
+ * This allows directory ID to be available throughout the request processing.
+ */
 public class DirectoryContextHolder {
+
     private static final ThreadLocal<UUID> DIRECTORY_CONTEXT = new ThreadLocal<>();
 
     public static void setDirectoryId(UUID directoryId) {

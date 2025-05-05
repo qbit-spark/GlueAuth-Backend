@@ -84,6 +84,15 @@ public class DirectoryUserEntity {
     )
     private List<UserIdentity> identities = new ArrayList<>();
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "directory_user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "role"})
+    )
+    @Column(name = "role")
+    private List<String> roles = new ArrayList<>(Collections.singleton("NORMAL_USER"));
+
     // Custom user attributes (extensible schema)
     @Column(columnDefinition = "jsonb")
     private String metadata;
@@ -122,6 +131,29 @@ public class DirectoryUserEntity {
 
     public void resetFailedLoginAttempts() {
         this.failedLoginAttempts = 0;
+    }
+
+    // Helper method to add a role
+    public void addRole(String role) {
+        if (this.roles == null) {
+            this.roles = new ArrayList<>();
+        }
+        this.roles.add(role);
+    }
+
+    // Helper method to remove a role
+    public void removeRole(String role) {
+        if (this.roles != null) {
+            this.roles.remove(role);
+            if (this.roles.isEmpty()) {
+                this.roles.add("NORMAL_USER");
+            }
+        }
+    }
+
+    // Helper method to check if user has a specific role
+    public boolean hasRole(String role) {
+        return this.roles != null && this.roles.contains(role);
     }
 
     public void recordSuccessfulLogin() {
