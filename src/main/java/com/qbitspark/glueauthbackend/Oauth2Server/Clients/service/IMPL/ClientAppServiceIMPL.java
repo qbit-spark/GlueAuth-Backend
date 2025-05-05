@@ -59,7 +59,7 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
         String clientId = "clt_" + RandomStringUtils.randomAlphanumeric(28);
 
         // Generate a more complex client secret
-        String clientSecret = RandomStringUtils.randomAlphanumeric(90);
+        String clientSecret = RandomStringUtils.randomAlphanumeric(70);
 
 
         // Create a new client entity
@@ -158,7 +158,7 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
                 )
                 .clientSettings(ClientSettings.builder()
                         .requireProofKey(client.isRequireProofKey())
-                        .requireAuthorizationConsent(true)
+                        .requireAuthorizationConsent(false)
                         .build())
                 .scope("openid")
                 .scope("read")
