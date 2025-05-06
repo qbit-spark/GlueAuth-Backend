@@ -1,6 +1,7 @@
 package com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.AccountType;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.OrganizationSize;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SubscriptionStatus;
@@ -94,18 +95,20 @@ public class AccountEntity {
     @Column(name = "locked_reason")
     private String lockedReason;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "developer_account_roles",
-            joinColumns = @JoinColumn(name = "account_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    private Set<AccountRoles> roles = new HashSet<>();
+    @JsonIgnore
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JoinTable(name = "developer_account_roles",
+            joinColumns = @JoinColumn(name = "account_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "role_id"))
+    private Set<AccountRoles> roles;
 
+    @JsonIgnore
+    @JsonManagedReference
     // Reverse relationship to handle teams that a user belongs to
     @OneToMany(mappedBy = "user")
     private Set<TeamMemberEntity> teamMemberships = new HashSet<>();
 
+    @JsonIgnore
     // For organization accounts, their owned teams
     @OneToMany(mappedBy = "account")
     private Set<TeamEntity> ownedTeams = new HashSet<>();
