@@ -5,25 +5,19 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.qbitspark.glueauthbackend.Oauth2Server.Clients.config.jwt.DirectoryAwareJwtCustomizer;
-import com.qbitspark.glueauthbackend.Oauth2Server.Clients.config.jwt.DirectoryAwareOidcUserInfoService;
-import com.qbitspark.glueauthbackend.Oauth2Server.Clients.config.jwt.DirectoryContextFilter;
-import com.qbitspark.glueauthbackend.Oauth2Server.Clients.service.IMPL.DirectoryAwareUserDetailsService;
-import com.qbitspark.glueauthbackend.Oauth2Server.Clients.utils.DirectoryContextHolder;
-
+import com.qbitspark.glueauthbackend.Oauth2Server.Clients.config.UseDetails.CustomClientUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -34,8 +28,6 @@ import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
@@ -46,18 +38,11 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
-import java.util.UUID;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class OAuth2ServerConfig {
-
-    @Qualifier("directoryAwareUserDetailsService")
-    private final DirectoryAwareUserDetailsService userDetailsService;
-    private final DirectoryAwareJwtCustomizer jwtCustomizer;
-    private final DirectoryAwareOidcUserInfoService oidcUserInfoService;
-    private final DirectoryContextFilter directoryContextFilter;
 
     @Value("${app.security.rsa.public-key}")
     private String publicKeyString;
@@ -65,6 +50,8 @@ public class OAuth2ServerConfig {
     @Value("${app.security.rsa.private-key}")
     private String privateKeyString;
 
+    @Qualifier("customClientUserDetailsService")
+    private final CustomClientUserDetailsService userDetailsService;
 
     @Bean
     @Order(1)
@@ -79,29 +66,11 @@ public class OAuth2ServerConfig {
                 .securityMatcher("/oauth2/**", "/login", "/custom-login")
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(endpointsMatcher)
-                        .ignoringRequestMatchers("/login")  // Use separate call for a string pattern
+                        .ignoringRequestMatchers("/login")
                 )
                 .with(authorizationServerConfigurer, (authorizationServer) -> {
-                    // Add token customizer to include directory claims
-                    authorizationServer.tokenGenerator(tokenGenerator(jwkSource()));
-
-                    // Enable OpenID Connect with directory-aware user info
-                    authorizationServer.oidc(oidc ->
-                            oidc.userInfoEndpoint(userInfo ->
-                                    userInfo.userInfoMapper(context -> {
-                                        // Extract authentication from context
-                                        Authentication authentication = context.getAuthentication();
-
-                                        // Create user info with directory context
-                                        UUID directoryId = DirectoryContextHolder.getDirectoryId();
-                                        if (directoryId != null) {
-                                            // Find user in directory context
-                                            String username = authentication.getName();
-                                            return oidcUserInfoService.createUserInfo(username, directoryId);
-                                        }
-
-                                        return null;
-                                    })));
+                    // Enable OpenID Connect with client-based directory context
+                    authorizationServer.oidc(Customizer.withDefaults());
                 })
                 .authorizeHttpRequests((authorize) ->
                         authorize
@@ -128,9 +97,9 @@ public class OAuth2ServerConfig {
                         .defaultSuccessUrl("/home", true)
                         .permitAll()
                 )
+
                 .userDetailsService(userDetailsService);
 
-        http.addFilterBefore(directoryContextFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -138,7 +107,7 @@ public class OAuth2ServerConfig {
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
         // Generate a fixed key ID
-        String keyId = "glueauth-server-kid";
+        String keyId = "auth-server-kid";
 
         // Load RSA keys from properties
         KeyPair keyPair = loadRsaKeys();
@@ -163,20 +132,21 @@ public class OAuth2ServerConfig {
             // Get RSA key factory
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
-            // Create a public key
+            // Create public key
             X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
             RSAPublicKey publicKey = (RSAPublicKey) keyFactory.generatePublic(publicKeySpec);
 
-            // Create a private key
+            // Create private key
             PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
             RSAPrivateKey privateKey = (RSAPrivateKey) keyFactory.generatePrivate(privateKeySpec);
 
-            // Return a key pair
+            // Return key pair
             return new KeyPair(publicKey, privateKey);
         } catch (Exception ex) {
             throw new IllegalStateException("Failed to load RSA keys", ex);
         }
     }
+
 
     @Bean
     public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
@@ -184,38 +154,10 @@ public class OAuth2ServerConfig {
     }
 
     @Bean
-    public OAuth2TokenCustomizer<JwtEncodingContext> tokenCustomizer() {
-        return jwtCustomizer;
-    }
-
-    @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
+        // Explicitly set the issuer URL to use port 9000
         return AuthorizationServerSettings.builder()
-               // .issuer("https://auth.glueauth.com")
-                .issuer("http://localhost:8083")
+                .issuer("http://localhost:9000")
                 .build();
-    }
-
-    @Bean
-    public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource) {
-        // Create JWT encoder
-        JwtEncoder jwtEncoder = new NimbusJwtEncoder(jwkSource);
-
-        // Create JWT generator
-        JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
-
-        // Set your customizer on the JWT generator
-        jwtGenerator.setJwtCustomizer(jwtCustomizer);
-
-        // Create standard token generators
-        OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
-        OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
-
-        // Return combined generator
-        return new DelegatingOAuth2TokenGenerator(
-                jwtGenerator,
-                accessTokenGenerator,
-                refreshTokenGenerator
-        );
     }
 }

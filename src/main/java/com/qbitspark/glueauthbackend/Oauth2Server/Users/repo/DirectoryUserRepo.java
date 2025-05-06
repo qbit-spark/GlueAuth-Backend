@@ -14,12 +14,15 @@ public interface DirectoryUserRepo extends JpaRepository<DirectoryUserEntity, UU
 
     boolean existsByUsernameAndDirectory(String username, DirectoryEntity directory);
 
+    Optional<DirectoryUserEntity> findByUsername(String username);
+
     Optional<DirectoryUserEntity> findByUsernameAndDirectory(String username, DirectoryEntity directory);
 
     Optional<DirectoryUserEntity> findByEmailAndDirectory(String email, DirectoryEntity directory);
 
     DirectoryUserEntity findByPhoneNumber(String phoneNumber);
 
-   // void deleteById(UUID id);
+    List<DirectoryUserEntity> findAllByUsername(String username);
+    List<DirectoryUserEntity> findAllByEmail(String email);
 
 }
