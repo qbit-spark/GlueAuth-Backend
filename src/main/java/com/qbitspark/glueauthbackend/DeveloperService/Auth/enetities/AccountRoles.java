@@ -15,17 +15,14 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @Setter
-
 @Table(name = "roles_table")
 public class AccountRoles {
+    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @JsonIgnore
+    @Column(name = "role_id")
     private UUID roleId;
-    private String roleName;
 
-    @Override
-    public String toString() {
-        return roleName;
-    }
+    @Column(name = "role_name")
+    private String roleName;
 }

@@ -21,6 +21,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 public class JWTAuthFilter extends OncePerRequestFilter {
     @Autowired
     private  JWTProvider jwtProvider;
+
     @Qualifier("customUserDetailsService")
     @Autowired
     private UserDetailsService userDetailsService;

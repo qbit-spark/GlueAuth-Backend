@@ -7,6 +7,7 @@ import com.qbitspark.glueauthbackend.Oauth2Server.Users.payloads.DirectoryUserRe
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.repo.DirectoryUserRepo;
 import com.qbitspark.glueauthbackend.Oauth2Server.Users.service.DirectoryUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class DirectoryUserServiceIMPL implements DirectoryUserService {
 
     private final DirectoryUserRepo directoryUserRepo;
     private final DirectoryRepo directoryRepo;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public DirectoryUserEntity save(DirectoryUserRequest request) {
@@ -37,7 +39,7 @@ public class DirectoryUserServiceIMPL implements DirectoryUserService {
         // Create a new DirectoryUserEntity
         DirectoryUserEntity directoryUserEntity = new DirectoryUserEntity();
         directoryUserEntity.setEmail(request.getEmail());
-        directoryUserEntity.setPassword(request.getPassword());
+        directoryUserEntity.setPassword(passwordEncoder.encode(request.getPassword()));
         directoryUserEntity.setUsername(generateUserName(request.getEmail()));
         directoryUserEntity.setDirectory(directory);
 
