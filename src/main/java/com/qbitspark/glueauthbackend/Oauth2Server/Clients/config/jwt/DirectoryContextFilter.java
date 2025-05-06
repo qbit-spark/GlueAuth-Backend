@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  */
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(1)
 @RequiredArgsConstructor
 public class DirectoryContextFilter extends OncePerRequestFilter {
 

@@ -32,7 +32,8 @@ public class DirectoryAwareUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
         // Get directory ID from the context holder
-        UUID directoryId = DirectoryContextHolder.getDirectoryId();
+        //UUID directoryId = DirectoryContextHolder.getDirectoryId();
+        UUID directoryId = UUID.fromString("3e08ac7a-0ff8-4577-a8b0-2fe42e5778bd");
         if (directoryId == null) {
             throw new AuthenticationServiceException("No directory context found");
         }
