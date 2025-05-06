@@ -7,9 +7,7 @@ import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.OrganizationSiz
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SubscriptionStatus;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enums.SubscriptionTier;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -17,7 +15,8 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@RequiredArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
 @Table(name = "developer_account")
@@ -95,23 +94,19 @@ public class AccountEntity {
     @Column(name = "locked_reason")
     private String lockedReason;
 
-    @JsonIgnore
-    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "developer_account_roles",
             joinColumns = @JoinColumn(name = "account_id", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "role_id"))
     private Set<AccountRoles> roles;
 
-    @JsonIgnore
-    @JsonManagedReference
-    // Reverse relationship to handle teams that a user belongs to
-    @OneToMany(mappedBy = "user")
-    private Set<TeamMemberEntity> teamMemberships = new HashSet<>();
-
-    @JsonIgnore
-    // For organization accounts, their owned teams
-    @OneToMany(mappedBy = "account")
-    private Set<TeamEntity> ownedTeams = new HashSet<>();
+//    @JsonIgnore
+//    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+//    private Set<TeamMemberEntity> teamMemberships;
+//
+//    @JsonIgnore
+//    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
+//    private Set<TeamEntity> ownedTeams;
 
     @PrePersist
     protected void onCreate() {

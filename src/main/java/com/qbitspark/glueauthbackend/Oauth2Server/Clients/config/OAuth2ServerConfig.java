@@ -12,25 +12,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.stereotype.Service;
 
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -51,8 +47,8 @@ public class OAuth2ServerConfig {
     @Value("${app.security.rsa.private-key}")
     private String privateKeyString;
 
-    @Qualifier("customClientUserDetailsService")
-    private final CustomClientUserDetailsService userDetailsService;
+    @Qualifier("oauth2UserDetailsService")
+    private final CustomClientUserDetailsService customClientUserDetailsService;
 
     @Bean
     @Order(1)
@@ -99,7 +95,7 @@ public class OAuth2ServerConfig {
                         .permitAll()
                 )
 
-                .userDetailsService(userDetailsService);
+                .userDetailsService(customClientUserDetailsService);
 
 
         return http.build();
@@ -161,4 +157,6 @@ public class OAuth2ServerConfig {
                 .issuer("http://localhost:9000")
                 .build();
     }
+
+
 }

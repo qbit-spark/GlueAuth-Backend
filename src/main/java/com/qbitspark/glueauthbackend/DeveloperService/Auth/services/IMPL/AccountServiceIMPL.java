@@ -78,46 +78,67 @@ public class AccountServiceIMPL implements AccountService {
 
     @Override
     public GlobalJsonResponseBody login(LoginRequestBody loginRequestBody) {
-        //Todo: Validate request body
-        if (loginRequestBody.getEmail() == null || loginRequestBody.getEmail().trim().isEmpty()) {
+
+        // Validate request body
+        if (loginRequestBody.getEmail() == null || loginRequestBody.getEmail().isEmpty()) {
             throw new ValidationException("Email is required");
         }
 
-        if (loginRequestBody.getPassword() == null || loginRequestBody.getPassword().trim().isEmpty()) {
+        if (loginRequestBody.getPassword() == null || loginRequestBody.getPassword().isEmpty()) {
             throw new ValidationException("Password is required");
         }
-        //Todo: Check if account exists
-        AccountEntity account = accountRepo.findByEmailAndUsername(loginRequestBody.getEmail(), generateUserName(loginRequestBody.getEmail())).orElseThrow(() -> new AccountExistenceException("Account not found"));
-        //Todo: Check if account is verified
+
+        // First, directly check if the account exists and is in good standing
+        String username = generateUserName(loginRequestBody.getEmail());
+        AccountEntity account = accountRepo.findByUsername(username)
+                .orElseThrow(() -> new AccountExistenceException("Account not found"));
+
+        // Check if email is available
+        if (!account.getEmail().equalsIgnoreCase(loginRequestBody.getEmail())) {
+            throw new AccountExistenceException("Account not found");
+        }
+
+        // Check account status before attempting authentication
         if (!account.isEmailVerified()) {
             throw new AccountExistenceException("Account not verified");
         }
-        //Todo: Check if account is active
+
         if (!account.isActive()) {
             throw new AccountExistenceException("Account is not active");
         }
-        //Todo: Check if account is locked
+
         if (account.isLocked()) {
             throw new AccountExistenceException("Account is locked");
         }
-        //Todo: Generate token
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        account.getUsername(),
-                        loginRequestBody.getPassword()));
+
+        // Validate password manually instead of using AuthenticationManager
+        if (!passwordEncoder.matches(loginRequestBody.getPassword(), account.getPasswordHash())) {
+            throw new ValidationException("Bad credentials");
+        }
+
+        // Create the authentication object manually
+        Set<GrantedAuthority> authorities = account.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
+                .collect(Collectors.toSet());
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                account.getUsername(), null, authorities);
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Generate tokens
         String accessToken = tokenProvider.generateAccessToken(authentication);
         String refreshToken = tokenProvider.generateRefreshToken(authentication);
 
+        // Create response
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setAccessToken(accessToken);
         loginResponse.setRefreshToken(refreshToken);
         loginResponse.setUserData(account);
 
         return generateSuccessResponseBody("Login successful", loginResponse, HttpStatus.OK);
-    }
 
+    }
 
     @Transactional
     @Override
