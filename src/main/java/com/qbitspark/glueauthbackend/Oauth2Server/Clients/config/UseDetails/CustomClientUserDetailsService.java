@@ -47,14 +47,14 @@ public class CustomClientUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("No client context found in session");
         }
 
-        // Find client app
+        // Find a client app
         ClientAppEntity clientApp = clientAppRepo.findByClientId(clientId)
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid client: " + clientId));
 
-        // Get directory from client app
+        // Get directory from the client app
         DirectoryEntity directory = clientApp.getDirectory();
 
-        // Find user in the directory
+        // Find the user in the directory
         DirectoryUserEntity user = directoryUserRepo.findByUsernameAndDirectory(username, directory)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found in directory"));
 

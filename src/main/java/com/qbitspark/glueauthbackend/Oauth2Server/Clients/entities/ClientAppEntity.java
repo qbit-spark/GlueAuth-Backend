@@ -47,7 +47,25 @@ public class ClientAppEntity {
     @Enumerated(EnumType.STRING)
     private ClientsTypes clientType;
 
-    @ElementCollection
+//    @ElementCollection
+//    @CollectionTable(
+//            name = "oauth_client_grant_types",
+//            joinColumns = @JoinColumn(name = "client_id")
+//    )
+//    @Enumerated(EnumType.STRING)
+//    @Column(name = "grant_type", nullable = false)
+//    private Set<GrantType> authorizationGrantTypes = new HashSet<>();
+//
+//    @ElementCollection
+//    @CollectionTable(
+//            name = "oauth_client_auth_methods",
+//            joinColumns = @JoinColumn(name = "client_id")
+//    )
+//    @Enumerated(EnumType.STRING)
+//    @Column(name = "auth_method", nullable = false)
+//    private Set<AuthenticationMethod> authenticationMethods = new HashSet<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)  // Add EAGER here
     @CollectionTable(
             name = "oauth_client_grant_types",
             joinColumns = @JoinColumn(name = "client_id")
@@ -56,7 +74,7 @@ public class ClientAppEntity {
     @Column(name = "grant_type", nullable = false)
     private Set<GrantType> authorizationGrantTypes = new HashSet<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)  // Add EAGER here
     @CollectionTable(
             name = "oauth_client_auth_methods",
             joinColumns = @JoinColumn(name = "client_id")
@@ -64,6 +82,7 @@ public class ClientAppEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "auth_method", nullable = false)
     private Set<AuthenticationMethod> authenticationMethods = new HashSet<>();
+
 
     @Column(name = "redirect_uris", columnDefinition = "jsonb")
     @Convert(converter = StringSetConverter.class)

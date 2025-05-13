@@ -310,7 +310,6 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
         return builder.build();
     }
 
-
     /**
      * Determine if the given set of grant types requires redirect URIs
      *
