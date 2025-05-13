@@ -22,6 +22,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 @RequiredArgsConstructor
@@ -49,24 +53,62 @@ public class SecurityConfiguration {
         return configuration.getAuthenticationManager();
     }
 
+//    @Bean
+//    @Order(2)
+//    SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+//        httpSecurity
+//                .securityMatcher("/api/v1/**", "/images/**") // Only match API patterns
+//                .csrf(AbstractHttpConfigurer::disable)
+//                .authorizeHttpRequests((authorize) -> authorize
+//                        .requestMatchers(HttpMethod.POST, "/api/v1/account/**").permitAll()
+//                        .requestMatchers(HttpMethod.GET, "/api/v1/account/**").permitAll()
+//                        .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
+//                        .requestMatchers("/custom-login", "/error", "/access-denied").permitAll()
+//                        .anyRequest().authenticated())
+//                .httpBasic(Customizer.withDefaults())
+//                .sessionManagement(session -> session
+//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+//
+//        httpSecurity.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+//
+//        return httpSecurity.build();
+//    }
+
     @Bean
     @Order(2)
-    SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
-                .securityMatcher("/api/v1/**", "/images/**") // Only match API patterns
-                .csrf(AbstractHttpConfigurer::disable)
+    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        // API endpoints matcher
+        RequestMatcher apiMatcher = new AntPathRequestMatcher("/api/**");
+
+        http
+                .securityMatcher(new OrRequestMatcher(
+                        new AntPathRequestMatcher("/**")
+                ))
                 .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers(HttpMethod.POST, "/api/v1/account/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/account/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
-                        .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                        .requestMatchers("/custom-login", "/error", "/access-denied").permitAll()
+                        .requestMatchers("/api/users/register").permitAll()
+                        .requestMatchers("/api/public").permitAll()
+                        .requestMatchers("/resource/protected").authenticated()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().authenticated()
+                )
 
-        httpSecurity.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                .formLogin(formLogin ->
+                        formLogin
+                                .loginPage("/custom-login")
+                                .loginProcessingUrl("/login")
+                                .defaultSuccessUrl("/")
+                                .permitAll()
+                )
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers(apiMatcher)
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                )
+                .exceptionHandling(exceptions -> exceptions
+                        .accessDeniedPage("/access-denied")
+                );
 
-        return httpSecurity.build();
+        return http.build();
     }
 
 
