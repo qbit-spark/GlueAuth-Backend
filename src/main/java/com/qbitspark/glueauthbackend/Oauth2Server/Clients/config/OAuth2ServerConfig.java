@@ -24,6 +24,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
@@ -76,7 +77,7 @@ public class OAuth2ServerConfig {
         http
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                        .invalidSessionUrl("/custom-login?expired")
+
                 )
 
                 .securityMatcher("/oauth2/**", "/.well-known/**", "/login", "/custom-login")
@@ -185,22 +186,27 @@ public class OAuth2ServerConfig {
             }
 
             // Build error URL
-            String redirectUrl = "/custom-login?error";
-            if (clientId != null) {
-                redirectUrl += "&client_id=" + clientId;
-            }
-
-            // Add specific error codes for better UX
-            if (exception instanceof BadCredentialsException) {
-                redirectUrl += "&code=invalid_credentials";
-            } else if (exception instanceof LockedException) {
-                redirectUrl += "&code=account_locked";
-            } else if (exception instanceof DisabledException) {
-                redirectUrl += "&code=account_disabled";
-            }
+            String redirectUrl = getString(exception, clientId);
 
             response.sendRedirect(redirectUrl);
         };
+    }
+
+    private static String getString(AuthenticationException exception, String clientId) {
+        String redirectUrl = "/custom-login?error";
+        if (clientId != null) {
+            redirectUrl += "&client_id=" + clientId;
+        }
+
+        // Add specific error codes for better UX
+        if (exception instanceof BadCredentialsException) {
+            redirectUrl += "&code=invalid_credentials";
+        } else if (exception instanceof LockedException) {
+            redirectUrl += "&code=account_locked";
+        } else if (exception instanceof DisabledException) {
+            redirectUrl += "&code=account_disabled";
+        }
+        return redirectUrl;
     }
 
     @Bean

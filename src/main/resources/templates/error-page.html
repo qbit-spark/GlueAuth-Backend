@@ -120,37 +120,6 @@
         .home-button:hover {
             background-color: var(--primary-hover);
         }
-
-        .technical-details {
-            margin-top: 30px;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
-            font-size: 14px;
-            color: #777;
-        }
-
-        .error-code {
-            font-family: monospace;
-            background-color: #f0f0f0;
-            padding: 3px 6px;
-            border-radius: 3px;
-        }
-
-        /* For mobile devices */
-        @media (max-width: 640px) {
-            .error-container {
-                max-width: 100%;
-                margin: 0 15px;
-            }
-
-            .header {
-                padding: 30px 20px;
-            }
-
-            .content {
-                padding: 20px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -167,12 +136,8 @@
         <!-- OAuth2 specific error details -->
         <div class="oauth2-error" th:if="${oauth2Error}">
             <h3>OAuth 2.0 Error Details:</h3>
-            <p><strong>Error Code:</strong> <span class="error-code" th:text="${oauth2Error}">error</span></p>
+            <p><strong>Error Code:</strong> <span th:text="${oauth2Error}">error</span></p>
             <p th:if="${oauth2ErrorDescription}"><strong>Description:</strong> <span th:text="${oauth2ErrorDescription}">description</span></p>
-
-            <div class="technical-details" th:if="${oauth2Error}">
-                <p>This error occurred during the OAuth 2.0 authentication or authorization process. For more information, see the <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1" target="_blank">OAuth 2.0 specification</a>.</p>
-            </div>
         </div>
 
         <a href="/" class="home-button">Return to Home</a>
