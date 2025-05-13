@@ -113,16 +113,20 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
         // Set PKCE requirement based on application type
         clientEntity.setRequireProofKey(OAuthDefaults.requiresPkce(applicationType));
 
-        // Set redirect URIs
-        if (request.getRedirectUris() != null && !request.getRedirectUris().isEmpty()) {
-            clientEntity.setRedirectUris(request.getRedirectUris());
-        } else {
-            // Check if redirect URIs are required for this client
-            if (requiresRedirectUris(grantTypes)) {
+        // Handle redirect URIs based on grant types
+        Set<String> redirectUris = request.getRedirectUris();
+        boolean hasRedirectUris = redirectUris != null && !redirectUris.isEmpty();
+        boolean needsRedirectUris = requiresRedirectUris(grantTypes);
+
+        if (needsRedirectUris) {
+            // These grant types require redirect URIs
+            if (!hasRedirectUris) {
                 throw new IllegalArgumentException("Redirect URIs are required for authorization code flows");
             }
-
-            // Otherwise set an empty set
+            clientEntity.setRedirectUris(redirectUris);
+        } else {
+            // These grant types don't use redirect URIs
+            // Always set an empty set for grant types that don't use redirect URIs
             clientEntity.setRedirectUris(new HashSet<>());
         }
 
@@ -314,7 +318,7 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
      * @return true if redirect URIs are required, false otherwise
      */
     private boolean requiresRedirectUris(Set<GrantType> grantTypes) {
-        // First check if this is a grant type that typically requires redirect URIs
+        // First, check if this is a grant type that typically requires redirect URIs
         boolean hasAuthCodeFlow = grantTypes.contains(GrantType.AUTH_CODE_FLOW) ||
                 grantTypes.contains(GrantType.AUTH_CODE_WITH_PKCE);
 
