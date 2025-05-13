@@ -14,4 +14,5 @@ public interface ClientAppRepo extends JpaRepository<ClientAppEntity, UUID> {
     Optional<ClientAppEntity> findById(String id);
     List<ClientAppEntity> findAllByDirectoryAndOwner(DirectoryEntity directory, AccountEntity owner);
     boolean existsByClientNameAndDirectory(String clientName, DirectoryEntity directory);
+    ClientAppEntity getClientNameByClientId(String clientId);
 }
