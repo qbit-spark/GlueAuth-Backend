@@ -1,13 +1,11 @@
 package com.qbitspark.glueauthbackend.Oauth2Server.Clients.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.qbitspark.glueauthbackend.DeveloperService.Auth.enetities.AccountEntity;
+import com.qbitspark.glueauthbackend.Oauth2Server.Clients.utils.StringSetConverter;
 import com.qbitspark.glueauthbackend.Oauth2Server.Directory.Entities.DirectoryEntity;
-import com.qbitspark.glueauthbackend.Oauth2Server.Users.Entities.DirectoryUserEntity;
-import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.ApplicationType;
-import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.GrantType;
-import com.qbitspark.glueauthbackend.Oauth2Server.Users.Enum.TokenFormat;
+import com.qbitspark.glueauthbackend.Oauth2Server.enums.ApplicationType;
+import com.qbitspark.glueauthbackend.Oauth2Server.enums.*;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -37,21 +35,51 @@ public class ClientAppEntity {
     @Column(name = "client_name", nullable = false)
     private String clientName;
 
-    @Column(name = "client_secret", nullable = false)
+    @Column(name = "client_secret")
     private String clientSecret;
 
-    @Column(name = "authorization_grant_type", nullable = false)
-    private String authorizationGrantType;
+    @Column(name = "application_type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ApplicationType applicationType;
 
-    @Column(name = "redirect_uri", nullable = false)
-    private String redirectUri;
+    // Client type - missing in your entity
+    @Column(name = "client_type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ClientsTypes clientType;
 
+    @ElementCollection
+    @CollectionTable(
+            name = "oauth_client_grant_types",
+            joinColumns = @JoinColumn(name = "client_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "grant_type", nullable = false)
+    private Set<GrantType> authorizationGrantTypes = new HashSet<>();
+
+    @ElementCollection
+    @CollectionTable(
+            name = "oauth_client_auth_methods",
+            joinColumns = @JoinColumn(name = "client_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_method", nullable = false)
+    private Set<AuthenticationMethod> authenticationMethods = new HashSet<>();
+
+    @Column(name = "redirect_uris", columnDefinition = "jsonb")
+    @Convert(converter = StringSetConverter.class)
+    private Set<String> redirectUris = new HashSet<>();
+
+    @Column(name = "use_refresh_tokens", nullable = false)
+    private Boolean useRefreshTokens = false;
+
+    // Token type - missing in your entity
+    @Column(name = "token_type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private TokenType tokenType;
+
+    // PKCE requirement - missing in your entity
     @Column(name = "require_proof_key", nullable = false)
-    private boolean requireProofKey;
-
-    @Column(name = "token_format", nullable = false)
-    private String tokenFormat;
-
+    private Boolean requireProofKey = false;
 
     @ManyToOne
     @JoinColumn(name = "directory_id", nullable = false)
@@ -70,4 +98,14 @@ public class ClientAppEntity {
     @JoinColumn(name = "owner_id", nullable = false)
     private AccountEntity owner;
 
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 }

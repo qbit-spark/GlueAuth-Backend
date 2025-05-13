@@ -21,6 +21,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.server.authorization.oidc.OidcProviderConfiguration;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -64,10 +65,11 @@ public class OAuth2ServerConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 
-                .securityMatcher("/oauth2/**", "/login", "/custom-login")
+                .securityMatcher("/oauth2/**", "/.well-known/**", "/login", "/custom-login")
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(endpointsMatcher)
                         .ignoringRequestMatchers("/login")
+                        .ignoringRequestMatchers("/.well-known/**")
                 )
                 .with(authorizationServerConfigurer, (authorizationServer) -> {
                     // Enable OpenID Connect with client-based directory context
@@ -75,7 +77,7 @@ public class OAuth2ServerConfig {
                 })
                 .authorizeHttpRequests((authorize) ->
                         authorize
-                                .requestMatchers("/custom-login", "/error", "/login").permitAll()
+                                .requestMatchers("/custom-login", "/error", "/login", "/.well-known/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling((exceptions) -> exceptions
@@ -158,9 +160,8 @@ public class OAuth2ServerConfig {
     public AuthorizationServerSettings authorizationServerSettings() {
         // Explicitly set the issuer URL to use port 9000
         return AuthorizationServerSettings.builder()
-                .issuer("http://localhost:9000")
+                .issuer("http://localhost:8083")
                 .build();
     }
-
 
 }
