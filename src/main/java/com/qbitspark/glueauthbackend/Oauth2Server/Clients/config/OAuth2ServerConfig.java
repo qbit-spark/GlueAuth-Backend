@@ -38,6 +38,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -65,6 +66,75 @@ public class OAuth2ServerConfig {
     @Qualifier("oauth2UserDetailsService")
     private final CustomClientUserDetailsService customClientUserDetailsService;
 
+//    @Bean
+//    @Order(1)
+//    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
+//            throws Exception {
+//        OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
+//                new OAuth2AuthorizationServerConfigurer();
+//
+//        RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
+//
+//        http
+//                .sessionManagement(session -> session
+//                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+//
+//                )
+//
+//                .securityMatcher("/oauth2/**", "/.well-known/**", "/login", "/custom-login")
+//                .csrf(csrf -> csrf
+//                        .ignoringRequestMatchers(endpointsMatcher)
+//                        .ignoringRequestMatchers("/login")
+//                        .ignoringRequestMatchers("/.well-known/**")
+//                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+//                )
+//                .with(authorizationServerConfigurer, (authorizationServer) -> {
+//                    // Enable OpenID Connect with client-based directory context
+//                    authorizationServer.oidc(Customizer.withDefaults());
+//                })
+//                .headers(headers -> headers
+//                        .xssProtection(xss -> xss
+//                                .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
+//                        .contentSecurityPolicy(csp -> csp
+//                                .policyDirectives("default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none';"))
+//                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+//                )
+//                .authorizeHttpRequests((authorize) ->
+//                        authorize
+//                                .anyRequest().authenticated()
+//                )
+//                .exceptionHandling((exceptions) -> exceptions
+//                        // For HTML browser requests - redirect to login
+//                        .defaultAuthenticationEntryPointFor(
+//                                new LoginUrlAuthenticationEntryPoint("/custom-login"),
+//                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
+//                        )
+//                        // For API requests - return 401 with WWW-Authenticate header
+//                        .defaultAuthenticationEntryPointFor(
+//                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+//                                new MediaTypeRequestMatcher(MediaType.APPLICATION_JSON)
+//                        )
+//                        // For AJAX requests
+//                        .defaultAuthenticationEntryPointFor(
+//                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+//                                new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest")
+//                        )
+//                        // Optional: Custom access denied handler (for 403 Forbidden)
+//                        .accessDeniedPage("/access-denied")
+//                )
+//                .formLogin(form -> form
+//                        .loginPage("/custom-login")
+//                        .loginProcessingUrl("/login")
+//                        .successHandler(customAuthenticationSuccessHandler())
+//                        .failureHandler(customAuthenticationFailureHandler())
+//                        .permitAll()
+//                )
+//                .userDetailsService(customClientUserDetailsService);
+//
+//        return http.build();
+//    }
+
+
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
@@ -72,36 +142,26 @@ public class OAuth2ServerConfig {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 new OAuth2AuthorizationServerConfigurer();
 
-        RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
+        // Define API request matchers
+        RequestMatcher apiRequestMatcher = new AntPathRequestMatcher("/api/**");
 
         http
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-
-                )
-
-                .securityMatcher("/oauth2/**", "/.well-known/**", "/login", "/custom-login")
+                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers(endpointsMatcher)
-                        .ignoringRequestMatchers("/login")
-                        .ignoringRequestMatchers("/.well-known/**")
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers(authorizationServerConfigurer.getEndpointsMatcher())
+                        .ignoringRequestMatchers(apiRequestMatcher)
                 )
-                .with(authorizationServerConfigurer, (authorizationServer) -> {
-                    // Enable OpenID Connect with client-based directory context
-                    authorizationServer.oidc(Customizer.withDefaults());
-                })
-                .headers(headers -> headers
-                        .xssProtection(xss -> xss
-                                .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
-                        .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none';"))
-                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                .with(authorizationServerConfigurer, (authorizationServer) ->
+                                authorizationServer
+                                        // Enable consent page
+//                                .authorizationEndpoint(authorizationEndpoint ->
+//                                        authorizationEndpoint.consentPage("/oauth2/consent"))
+                                        // Enable OpenID Connect 1.0
+                                        .oidc(Customizer.withDefaults())
                 )
                 .authorizeHttpRequests((authorize) ->
                         authorize
-                                .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
-                                .requestMatchers("/custom-login", "/error", "/login", "/.well-known/**").permitAll()
+                                .requestMatchers("/oauth2/consent").permitAll() // This must come BEFORE anyRequest()
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling((exceptions) -> exceptions
@@ -115,21 +175,10 @@ public class OAuth2ServerConfig {
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                 new MediaTypeRequestMatcher(MediaType.APPLICATION_JSON)
                         )
-                        // For AJAX requests
-                        .defaultAuthenticationEntryPointFor(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                                new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest")
-                        )
                         // Optional: Custom access denied handler (for 403 Forbidden)
                         .accessDeniedPage("/access-denied")
                 )
-                .formLogin(form -> form
-                        .loginPage("/custom-login")
-                        .loginProcessingUrl("/login")
-                        .successHandler(customAuthenticationSuccessHandler())
-                        .failureHandler(customAuthenticationFailureHandler())
-                        .permitAll()
-                )
+                // Set database user details service
                 .userDetailsService(customClientUserDetailsService);
 
         return http.build();
