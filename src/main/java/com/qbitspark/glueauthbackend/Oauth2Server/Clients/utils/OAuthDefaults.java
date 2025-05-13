@@ -97,11 +97,11 @@ public class OAuthDefaults {
         authMethodMap.put(ApplicationType.DEVICE_APP, deviceAuthMethods);
 
         // Initialize token type mappings
-        tokenTypeMap.put(ApplicationType.WEB_APP, TokenType.OPAQUE);
+        tokenTypeMap.put(ApplicationType.WEB_APP, TokenType.SELF_CERTIFYING);
         tokenTypeMap.put(ApplicationType.SINGLE_PAGE_APP, TokenType.SELF_CERTIFYING);
         tokenTypeMap.put(ApplicationType.NATIVE_APP, TokenType.SELF_CERTIFYING);
         tokenTypeMap.put(ApplicationType.MACHINE_TO_MACHINE, TokenType.SELF_CERTIFYING);
-        tokenTypeMap.put(ApplicationType.DEVICE_APP, TokenType.OPAQUE);
+        tokenTypeMap.put(ApplicationType.DEVICE_APP, TokenType.SELF_CERTIFYING);
     }
 
     /**

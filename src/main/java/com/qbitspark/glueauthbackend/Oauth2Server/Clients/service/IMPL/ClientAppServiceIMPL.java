@@ -117,11 +117,11 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
         if (request.getRedirectUris() != null && !request.getRedirectUris().isEmpty()) {
             clientEntity.setRedirectUris(request.getRedirectUris());
         } else {
-            // If no redirect URIs provided, throw an error for authorization code flows
-            if (grantTypes.contains(GrantType.AUTH_CODE_FLOW) ||
-                    grantTypes.contains(GrantType.AUTH_CODE_WITH_PKCE)) {
+            // Check if redirect URIs are required for this client
+            if (requiresRedirectUris(grantTypes)) {
                 throw new IllegalArgumentException("Redirect URIs are required for authorization code flows");
             }
+
             // Otherwise set an empty set
             clientEntity.setRedirectUris(new HashSet<>());
         }
@@ -304,5 +304,27 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
                 .scope("write");
 
         return builder.build();
+    }
+
+
+    /**
+     * Determine if the given set of grant types requires redirect URIs
+     *
+     * @param grantTypes The set of grant types to check
+     * @return true if redirect URIs are required, false otherwise
+     */
+    private boolean requiresRedirectUris(Set<GrantType> grantTypes) {
+        // First check if this is a grant type that typically requires redirect URIs
+        boolean hasAuthCodeFlow = grantTypes.contains(GrantType.AUTH_CODE_FLOW) ||
+                grantTypes.contains(GrantType.AUTH_CODE_WITH_PKCE);
+
+        // Then check if this is a special case that doesn't need redirect URIs
+        boolean isExemptFlow = grantTypes.contains(GrantType.DEVICE_FLOW) ||
+                grantTypes.contains(GrantType.CLIENT_CREDENTIALS) ||
+                grantTypes.contains(GrantType.JWT_BEARER) ||
+                grantTypes.contains(GrantType.PASSWORD);
+
+        // If it has auth code flow but isn't exempt, then it needs to redirect URIs
+        return hasAuthCodeFlow && !isExemptFlow;
     }
 }
