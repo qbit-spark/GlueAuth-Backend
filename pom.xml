@@ -134,6 +134,8 @@
             <artifactId>spring-security-oauth2-jose</artifactId>
         </dependency>
 
+
+
     </dependencies>
 
     <build>

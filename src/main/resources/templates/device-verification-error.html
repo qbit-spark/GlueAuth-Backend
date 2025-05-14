@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Verification Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #d32f2f;
+            margin-bottom: 20px;
+        }
+        .error-details {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ffebee;
+            border-left: 4px solid #d32f2f;
+            border-radius: 2px;
+        }
+        .error-code {
+            font-weight: bold;
+        }
+        a.button {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #1976d2;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Verification Failed</h1>
+    <p>There was a problem authorizing the device.</p>
+
+    <div class="error-details" th:if="${error}">
+        <p class="error-code" th:text="${error.errorCode}">error_code</p>
+        <p th:text="${error.description}">Error description</p>
+    </div>
+
+    <a href="/device-verification" class="button">Try Again</a>
+</div>
+</body>
+</html>
