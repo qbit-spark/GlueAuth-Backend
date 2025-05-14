@@ -55,7 +55,8 @@ public class OAuthDefaults {
         // MACHINE_TO_MACHINE applications
         Set<GrantType> m2mGrants = new HashSet<>();
         m2mGrants.add(GrantType.CLIENT_CREDENTIALS);
-        // M2M typically doesn't use refresh tokens as it uses long-lived access tokens but lets add it for flexibility
+        // M2M typically doesn't use refresh tokens as it uses long-lived access tokens,
+        // but let's add it for flexibility
         m2mGrants.add(GrantType.REFRESH_TOKEN);
         grantTypeMap.put(ApplicationType.MACHINE_TO_MACHINE, m2mGrants);
 
