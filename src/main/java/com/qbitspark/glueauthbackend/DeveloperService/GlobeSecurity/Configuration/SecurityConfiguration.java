@@ -53,63 +53,27 @@ public class SecurityConfiguration {
         return configuration.getAuthenticationManager();
     }
 
-//    @Bean
-//    @Order(2)
-//    SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-//        httpSecurity
-//                .securityMatcher("/api/v1/**", "/images/**") // Only match API patterns
-//                .csrf(AbstractHttpConfigurer::disable)
-//                .authorizeHttpRequests((authorize) -> authorize
-//                        .requestMatchers(HttpMethod.POST, "/api/v1/account/**").permitAll()
-//                        .requestMatchers(HttpMethod.GET, "/api/v1/account/**").permitAll()
-//                        .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
-//                        .requestMatchers("/custom-login", "/error", "/access-denied").permitAll()
-//                        .anyRequest().authenticated())
-//                .httpBasic(Customizer.withDefaults())
-//                .sessionManagement(session -> session
-//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//
-//        httpSecurity.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-//
-//        return httpSecurity.build();
-//    }
-
     @Bean
     @Order(2)
-    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        // API endpoints matcher
-        RequestMatcher apiMatcher = new AntPathRequestMatcher("/api/**");
-
-        http
-                .securityMatcher(new OrRequestMatcher(
-                        new AntPathRequestMatcher("/**")
-                ))
+    SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        httpSecurity
+                .securityMatcher("/api/v1/**", "/images/**") // Only match API patterns
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) -> authorize
+                        .requestMatchers(HttpMethod.POST, "/api/v1/account/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/account/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
                         .requestMatchers("/custom-login", "/error", "/access-denied").permitAll()
-                        .requestMatchers("/api/users/register").permitAll()
-                        .requestMatchers("/api/public").permitAll()
-                        .requestMatchers("/resource/protected").authenticated()
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
+                .httpBasic(Customizer.withDefaults())
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-                .formLogin(formLogin ->
-                        formLogin
-                                .loginPage("/custom-login")
-                                .loginProcessingUrl("/login")
-                                .defaultSuccessUrl("/")
-                                .permitAll()
-                )
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers(apiMatcher)
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                )
-                .exceptionHandling(exceptions -> exceptions
-                        .accessDeniedPage("/access-denied")
-                );
+        httpSecurity.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
+        return httpSecurity.build();
     }
+
 
 
 }
