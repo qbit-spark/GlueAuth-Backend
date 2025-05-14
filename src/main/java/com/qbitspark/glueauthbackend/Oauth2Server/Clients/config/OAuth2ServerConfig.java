@@ -72,11 +72,8 @@ public class OAuth2ServerConfig {
                 new OAuth2AuthorizationServerConfigurer();
 
         // Create device client authentication components using clientAppService as the repository
-        DeviceClientAuthenticationConverter deviceClientAuthenticationConverter =
-                new DeviceClientAuthenticationConverter(
-                        authorizationServerSettings.getDeviceAuthorizationEndpoint());
-        DeviceClientAuthenticationProvider deviceClientAuthenticationProvider =
-                new DeviceClientAuthenticationProvider(clientAppService);
+        DeviceClientAuthenticationConverter deviceClientAuthenticationConverter = new DeviceClientAuthenticationConverter(authorizationServerSettings.getDeviceAuthorizationEndpoint());
+        DeviceClientAuthenticationProvider deviceClientAuthenticationProvider = new DeviceClientAuthenticationProvider(clientAppService);
 
         RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
 
@@ -204,6 +201,7 @@ public class OAuth2ServerConfig {
         // Set the issuer URL
         return AuthorizationServerSettings.builder()
                 .issuer("http://localhost:8083")
+                .deviceAuthorizationEndpoint("/oauth2/device_authorization")
                 .build();
     }
 }
