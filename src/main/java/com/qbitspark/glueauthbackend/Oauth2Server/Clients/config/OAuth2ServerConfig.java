@@ -16,15 +16,22 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
@@ -64,7 +71,7 @@ public class OAuth2ServerConfig {
     private final ClientAppServiceIMPL clientAppService;
 
     @Bean
-    @Order(1)
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http,
                                                                       AuthorizationServerSettings authorizationServerSettings)
             throws Exception {
@@ -77,75 +84,38 @@ public class OAuth2ServerConfig {
 
         RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
 
+
         http
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                )
-                .securityMatcher("/oauth2/**", "/.well-known/**", "/login", "/custom-login")
+                .securityMatcher("/oauth2/**", "/.well-known/**", "/login")
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(endpointsMatcher)
-                        .ignoringRequestMatchers("/login")
-                        .ignoringRequestMatchers("/.well-known/**")
-                        // Explicitly ignore CSRF for device authorization endpoint
-                        .ignoringRequestMatchers("/oauth2/device_authorization")
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
+
                 .with(authorizationServerConfigurer, (authorizationServer) -> {
-                    // Configure device authorization endpoint with custom authentication
                     authorizationServer
                             .deviceAuthorizationEndpoint(deviceAuthEndpoint ->
-                                    deviceAuthEndpoint.verificationUri("/device-verification"))
+                                    deviceAuthEndpoint.verificationUri("/oauth2/device_verification"))
+
+
                             // Add client authentication configuration for device flow
                             .clientAuthentication(clientAuth ->
                                     clientAuth
                                             .authenticationConverter(deviceClientAuthenticationConverter)
                                             .authenticationProvider(deviceClientAuthenticationProvider)
                             )
-                            // Enable OpenID Connect
                             .oidc(Customizer.withDefaults());
                 })
-                .headers(headers -> headers
-                        .xssProtection(xss -> xss
-                                .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
-                        .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none';"))
-                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
-                )
                 .authorizeHttpRequests((authorize) ->
                         authorize
-                                .requestMatchers("/oauth2/device_authorization").permitAll()  // Explicitly permit this endpoint
+                                .requestMatchers("/oauth2/device_authorization").permitAll()
                                 .anyRequest().authenticated()
                 )
-                .exceptionHandling((exceptions) -> exceptions
-                        // For HTML browser requests - redirect to login
-                        .defaultAuthenticationEntryPointFor(
-                                new LoginUrlAuthenticationEntryPoint("/custom-login"),
-                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-                        )
-                        // For API requests - return 401 with WWW-Authenticate header
-                        .defaultAuthenticationEntryPointFor(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                                new MediaTypeRequestMatcher(MediaType.APPLICATION_JSON)
-                        )
-                        // For AJAX requests
-                        .defaultAuthenticationEntryPointFor(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                                new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest")
-                        )
-                        // Optional: Custom access denied handler (for 403 Forbidden)
-                        .accessDeniedPage("/access-denied")
-                )
-                .formLogin(form -> form
-                        .loginPage("/custom-login")
-                        .loginProcessingUrl("/login")
-                        .permitAll()
-                )
+
+                .formLogin(Customizer.withDefaults())
                 .userDetailsService(customClientUserDetailsService);
 
         return http.build();
     }
-
-
 
 
     @Bean
@@ -204,4 +174,20 @@ public class OAuth2ServerConfig {
                 .deviceAuthorizationEndpoint("/oauth2/device_authorization")
                 .build();
     }
+
+    // This bean creates the database-backed implementation of OAuth2AuthorizationService
+    @Bean
+    public OAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate,
+                                                           RegisteredClientRepository registeredClientRepository) {
+        return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+    }
+
+    // This bean creates the consent service
+    @Bean
+    public OAuth2AuthorizationConsentService authorizationConsentService(JdbcTemplate jdbcTemplate,
+                                                                         RegisteredClientRepository registeredClientRepository) {
+        return new JdbcOAuth2AuthorizationConsentService(jdbcTemplate, registeredClientRepository);
+    }
+
+
 }

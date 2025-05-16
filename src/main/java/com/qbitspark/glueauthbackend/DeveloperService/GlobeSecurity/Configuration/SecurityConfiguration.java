@@ -63,8 +63,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/account/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/account/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
-                        .requestMatchers("/custom-login", "/error", "/access-denied").permitAll()
                         .anyRequest().authenticated())
+
                 .httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));

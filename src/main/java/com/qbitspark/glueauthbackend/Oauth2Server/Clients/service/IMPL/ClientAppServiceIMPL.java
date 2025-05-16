@@ -167,6 +167,7 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
 
     @Override
     public RegisteredClient findByClientId(String clientId) {
+        //Todo: Here we can handle the case where the clientId is not found
         return mapToClient(repository.findByClientId(clientId).orElseThrow());
     }
 
@@ -297,8 +298,15 @@ public class ClientAppServiceIMPL implements ClientAppService, RegisteredClientR
             clientSettingsBuilder.requireProofKey(false);
         }
 
-        clientSettingsBuilder.requireAuthorizationConsent(false);
+        // Check if device flow is included in the grant types
+        boolean isDeviceFlow = client.getAuthorizationGrantTypes().contains(GrantType.DEVICE_FLOW);
+        System.out.println("This is device flow: " + isDeviceFlow);
+
+        // Enable authorization consent only for device flow
+        clientSettingsBuilder.requireAuthorizationConsent(isDeviceFlow);
+
         builder.clientSettings(clientSettingsBuilder.build());
+
 
         // Add default scopes
         builder.scope("openid")

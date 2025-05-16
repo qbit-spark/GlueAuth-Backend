@@ -30,7 +30,6 @@ public class ClientAppController {
     }
 
 
-
     private GlobalJsonResponseBody generateSuccessResponseBody(String message, Object data, HttpStatus statusCode) {
         return new GlobalJsonResponseBody(
                 true,
